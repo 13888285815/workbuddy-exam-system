@@ -721,6 +721,12 @@ function showPage(name){
   if(name==='cleanup')renderCleanup();
 }
 
+// HTML转义函数
+function escapeHtml(str){
+  if(!str)return'';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 // ===================== DASHBOARD =====================
 function renderDashboard(){
   const users=DB.users().filter(u=>u.role==='student');
@@ -1126,6 +1132,7 @@ function parseText(text){
     else if(options.length===0&&answer.length>=5)type='essay';
     qs.push({id:'q'+Date.now()+Math.random().toString(36).slice(2,6),type,content:contentLine,options,answer,score:type==='essay'?10:type==='multi'?4:2,explain});
   }
+  console.log('parseText解析结果：',qs.length,'道题',qs);
   return qs;
 }
 
@@ -1151,18 +1158,29 @@ function importParsedQuestions(){
 
 // 显示解析预览（带选择功能）
 function showParsedPreview(){
-  if(!parsedQuestions.length)return;
+  if(!parsedQuestions.length){
+    showToast('没有解析出任何题目，请检查文件格式','error');
+    return;
+  }
   document.getElementById('parsedPanel').style.display='block';
   document.getElementById('parsedCount').textContent='共 '+parsedQuestions.length+' 道题';
+  // 调试信息
+  console.log('解析结果：', parsedQuestions);
   // 统计各类型数量
   const counts={single:0,multi:0,judge:0,fill:0,essay:0};
-  parsedQuestions.forEach(q=>counts[q.type]++);
+  parsedQuestions.forEach(q=>counts[q.type]=(counts[q.type]||0)+1);
   ['single','multi','judge','fill','essay'].forEach(t=>{
     const el=document.getElementById('badge-'+t);
     if(el)el.textContent=counts[t];
   });
   renderParsedQuestions();
   updateSelectedCount();
+  // 自动切换到有数据的第一个tab
+  const firstTab=['single','multi','judge','fill','essay'].find(t=>counts[t]>0);
+  if(firstTab){
+    const tab=document.querySelector(`[onclick*="${firstTab}"]`);
+    if(tab)switchTab(tab,'tab-'+firstTab);
+  }
 }
 
 // 渲染预览题目（带选择框）
@@ -1174,11 +1192,18 @@ function renderParsedQuestions(){
     if(!el)return;
     const qs=parsedQuestions.filter(q=>q.type===type);
     if(!qs.length){
-      el.innerHTML='<div class="empty">暂无此类题目</div>';
+      el.innerHTML='<div class="empty">暂无此类题目（共 '+parsedQuestions.length+' 道题，已分配到其他类型）</div>';
+      el.classList.remove('active');
       return;
     }
-    el.innerHTML=qs.map((q,i)=>`
-      <div class="preview-q-item" data-id="${q.id}" style="padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:white">
+    el.innerHTML=qs.map((q,i)=>{
+      const optsStr=q.options&&q.options.length?
+        `<div style="margin-top:8px;font-size:12px;color:var(--text2);line-height:1.8">${q.options.map(o=>`<span style="margin-right:12px">${o}</span>`).join('')}</div>`:'';
+      const ansStr=`<div style="margin-top:8px;padding:8px;background:var(--green-light);border-radius:6px;font-size:12px">
+        <span style="color:var(--green);font-weight:500">答案：</span><span style="color:var(--text)">${escapeHtml(q.answer)||'未找到答案'}</span>
+      </div>`;
+      const expStr=q.explain?`<div style="margin-top:6px;font-size:11px;color:var(--text3)">解析：${escapeHtml(q.explain)}</div>`:'';
+      return `<div class="preview-q-item" data-id="${q.id}" style="padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:white">
         <div style="display:flex;align-items:flex-start;gap:10px">
           <input type="checkbox" class="q-select-cb" data-id="${q.id}" checked style="width:18px;height:18px;margin-top:2px;flex-shrink:0;cursor:pointer" onclick="updateSelectedCount()">
           <div style="flex:1;min-width:0">
@@ -1186,22 +1211,15 @@ function renderParsedQuestions(){
               <span style="background:${typeColors[type]};color:white;padding:2px 8px;border-radius:4px;font-size:11px">${typeMap[type]}</span>
               <span style="color:var(--text3);font-size:12px">第 ${i+1} 题</span>
             </div>
-            <div style="font-size:13px;line-height:1.6;word-break:break-word">${q.content}</div>
-            ${q.options&&q.options.length?`<div style="margin-top:8px;font-size:12px;color:var(--text2)">${q.options.join(' &nbsp;&nbsp; ')}</div>`:''}
-            <div style="margin-top:8px;padding:8px;background:var(--green-light);border-radius:6px;font-size:12px">
-              <span style="color:var(--green);font-weight:500">答案：</span><span style="color:var(--text)">${q.answer||'未找到答案'}</span>
-            </div>
-            ${q.explain?`<div style="margin-top:6px;font-size:11px;color:var(--text3)">解析：${q.explain}</div>`:''}
+            <div style="font-size:13px;line-height:1.6;word-break:break-word">${escapeHtml(q.content)||'【内容为空】'}</div>
+            ${optsStr}
+            ${ansStr}
+            ${expStr}
           </div>
         </div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   });
-  // 默认显示单选题tab
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-  document.querySelector('.tab').classList.add('active');
-  document.getElementById('tab-single').classList.add('active');
 }
 
 // 全选/取消全选
