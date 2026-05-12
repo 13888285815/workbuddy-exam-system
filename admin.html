@@ -768,15 +768,30 @@ let currentUser = null;
 function doLogin(){
   const u=document.getElementById('loginUser').value.trim();
   const p=document.getElementById('loginPass').value;
-  // 如果用户数据为空，强制重新初始化
-  if(DB.users().length === 0){
-    DB.set('initialized', false);
-    initData();
+  // 强制重新初始化数据（防止localStorage损坏）
+  DB.set('initialized', false);
+  initData();
+  // 获取用户数据
+  let users = DB.users();
+  // 确保有用户数据
+  if(users.length === 0){
+    // 再次尝试初始化
+    const defaultUsers = [
+      {id:'u1',username:'admin',password:'admin123',name:'管理员',role:'admin',status:'active',created:new Date().toLocaleDateString()},
+      {id:'u2',username:'student1',password:'123456',name:'张三',role:'student',status:'active',created:new Date().toLocaleDateString()}
+    ];
+    DB.set('users', defaultUsers);
+    users = defaultUsers;
   }
-  const users=DB.users();
   const user=users.find(x=>x.username===u&&x.password===p&&x.status==='active');
-  if(!user){showToast('用户名或密码错误','error');return;}
-  if(user.role!=='admin'){showToast('无管理员权限','error');return;}
+  if(!user){
+    showToast('用户名或密码错误','error');
+    return;
+  }
+  if(user.role!=='admin'){
+    showToast('无管理员权限','error');
+    return;
+  }
   currentUser=user;
   document.getElementById('loginPage').style.display='none';
   document.getElementById('appPage').style.display='flex';
@@ -784,6 +799,7 @@ function doLogin(){
   document.getElementById('sidebarUser').textContent=user.username;
   document.getElementById('topAvatar').textContent=user.name[0];
   showPage('dashboard');
+  showToast('登录成功','success');
 }
 function doLogout(){currentUser=null;document.getElementById('loginPage').style.display='flex';document.getElementById('appPage').style.display='none';}
 document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
