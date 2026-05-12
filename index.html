@@ -261,6 +261,12 @@ textarea.fill-input{resize:vertical;min-height:120px}
 .confirm-btns .confirm.danger{background:var(--red)}
 .confirm-btns .confirm.danger:hover{background:#8b1a1a}
 
+/* 无尽模式和错题库样式 */
+.endless-card{border:2px solid #667eea;background:linear-gradient(135deg,rgba(102,126,234,0.05),rgba(118,75,162,0.05))}
+.endless-card h3{color:#667eea}
+.wrong-card{border:2px solid #f5576c;background:linear-gradient(135deg,rgba(245,87,108,0.05),rgba(240,147,251,0.05))}
+.wrong-card h3{color:#f5576c}
+
 /* 响应式 */
 @media(max-width:768px){
   .exam-body{flex-direction:column}
@@ -598,18 +604,15 @@ function switchTab(el,tab){
 function renderPapers(){
   const papers=DB.papers().filter(p=>p.status==='published');
   const grid=$('paperGrid');
-  if(!papers.length){
-    grid.innerHTML=`<div class="empty">
-      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <h3>暂无可用试卷</h3>
-      <p>请联系管理员发布试卷</p>
-    </div>`;
-    return;
-  }
-  const records=DB.records().filter(r=>r.userId===currentUser.id);
-  grid.innerHTML=papers.map(p=>{
+  
+  // 获取错题数量
+  const wrongs=JSON.parse(localStorage.getItem('exam_wrongs')||'[]');
+  const allQs=DB.questions();
+  
+  // 试卷卡片
+  let papersHtml=papers.map(p=>{
     const qs=DB.questions().filter(q=>p.questionIds?.includes(q.id));
-    const attempted=records.filter(r=>r.paperId===p.id);
+    const attempted=DB.records().filter(r=>r.paperId===p.id&&r.userId===currentUser.id);
     const bestScore=attempted.length?Math.max(...attempted.map(r=>r.score)):'—';
     return `<div class="paper-card">
       ${attempted.length?'<span class="tag new">已考</span>':''}
@@ -623,6 +626,42 @@ function renderPapers(){
       <button class="start-btn" onclick="startExam('${p.id}')">${attempted.length?'再次考试':'开始考试'}</button>
     </div>`;
   }).join('');
+  
+  // 添加无尽模式和错题库卡片
+  if(allQs.length>0){
+    papersHtml+=`<div class="paper-card endless-card">
+      <h3>无尽模式</h3>
+      <div class="paper-meta">
+        <div><svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/></svg>题库共 ${allQs.length} 道题目</div>
+        <div><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>默认 60 分钟</div>
+        <div><svg viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>答完所有题目为止</div>
+      </div>
+      <p style="font-size:12px;color:var(--text3);margin:8px 0">挑战全题库！一直作答直到题库刷完，中途退出自动保存并评分</p>
+      <button class="start-btn" style="background:linear-gradient(135deg,#667eea,#764ba2)" onclick="startEndless()">开始挑战</button>
+    </div>`;
+  }
+  
+  if(wrongs.length>0){
+    papersHtml+=`<div class="paper-card wrong-card">
+      <h3>错题库</h3>
+      <div class="paper-meta">
+        <div><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>共 ${wrongs.length} 道错题</div>
+        <div><svg viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>针对复习</div>
+      </div>
+      <p style="font-size:12px;color:var(--text3);margin:8px 0">之前做错的题目，集中复习直到掌握</p>
+      <button class="start-btn" style="background:linear-gradient(135deg,#f093fb,#f5576c)" onclick="startWrongPractice()">复习错题</button>
+    </div>`;
+  }
+  
+  if(!papers.length&&allQs.length===0){
+    grid.innerHTML=`<div class="empty">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <h3>暂无可用试卷</h3>
+      <p>请联系管理员发布试卷或导入题库</p>
+    </div>`;
+  } else {
+    grid.innerHTML=papersHtml;
+  }
 }
 
 function renderHistory(){
@@ -731,6 +770,12 @@ function renderQuestions(){
 function renderInput(q,i){
   const answered=isAnswered(q);
   const marked=reviewMarks.has(q.id);
+  const isSpecialMode=isEndlessMode||isWrongPractice;
+  
+  let nextBtn='';
+  if(isSpecialMode){
+    nextBtn=`<button class="btn btn-primary btn-sm" onclick="checkAndNext('${q.id}',${i})" style="margin-top:8px">确认并下一题</button>`;
+  }
   
   if(q.type==='single'){
     return `<div class="options">${q.options.map((opt,oi)=>`
@@ -738,8 +783,8 @@ function renderInput(q,i){
         <span class="opt-letter">${String.fromCharCode(65+oi)}</span>
         <span>${opt}</span>
       </div>`).join('')}</div>
-      <div style="margin-top:12px;display:flex;gap:8px">
-        <button class="btn btn-sm" onclick="toggleMark('${q.id}',${i})" style="font-size:11px">${marked?'取消标记':'标记此题'}</button>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        ${isSpecialMode?nextBtn:`<button class="btn btn-sm" onclick="toggleMark('${q.id}',${i})" style="font-size:11px">${marked?'取消标记':'标记此题'}</button>`}
       </div>`;
   }
   if(q.type==='multi'){
@@ -751,8 +796,8 @@ function renderInput(q,i){
         <span>${opt}</span>
       </div>`).join('')}</div>
       <p style="font-size:12px;color:var(--text3);margin-top:10px">提示：多选题，请选择所有正确答案</p>
-      <div style="margin-top:12px;display:flex;gap:8px">
-        <button class="btn btn-sm" onclick="toggleMark('${q.id}',${i})" style="font-size:11px">${marked?'取消标记':'标记此题'}</button>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        ${isSpecialMode?nextBtn:`<button class="btn btn-sm" onclick="toggleMark('${q.id}',${i})" style="font-size:11px">${marked?'取消标记':'标记此题'}</button>`}
       </div>`;
   }
   if(q.type==='judge'){
@@ -761,24 +806,24 @@ function renderInput(q,i){
       <div class="judge-btn ${val==='正确'?'selected-true':''}" onclick="selectJudge('${q.id}',${i},'正确')">✓ 正确</div>
       <div class="judge-btn ${val==='错误'?'selected-false':''}" onclick="selectJudge('${q.id}',${i},'错误')">✗ 错误</div>
     </div>
-    <div style="margin-top:12px;display:flex;gap:8px">
-      <button class="btn btn-sm" onclick="toggleMark('${q.id}',${i})" style="font-size:11px">${marked?'取消标记':'标记此题'}</button>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      ${isSpecialMode?nextBtn:`<button class="btn btn-sm" onclick="toggleMark('${q.id}',${i})" style="font-size:11px">${marked?'取消标记':'标记此题'}</button>`}
     </div>`;
   }
   if(q.type==='fill'){
     const val=userAnswers[q.id]||'';
     return `<input class="fill-input" type="text" placeholder="请输入答案" value="${val}" oninput="saveText('${q.id}',${i},this.value)">
       <div class="char-count">已输入 ${val.length} 字</div>
-      <div style="margin-top:12px;display:flex;gap:8px">
-        <button class="btn btn-sm" onclick="toggleMark('${q.id}',${i})" style="font-size:11px">${marked?'取消标记':'标记此题'}</button>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        ${isSpecialMode?nextBtn.replace('btn-primary','btn-primary').replace('确认并下一题',isAnswered(q)?'确认并下一题':'先填写答案'):`<button class="btn btn-sm" onclick="toggleMark('${q.id}',${i})" style="font-size:11px">${marked?'取消标记':'标记此题'}</button>`}
       </div>`;
   }
   if(q.type==='essay'){
     const val=userAnswers[q.id]||'';
     return `<textarea class="fill-input" rows="6" placeholder="请输入答案..." oninput="saveText('${q.id}',${i},this.value)">${val}</textarea>
       <div class="char-count">已输入 ${val.length} 字 · 简答题由老师人工评分</div>
-      <div style="margin-top:12px;display:flex;gap:8px">
-        <button class="btn btn-sm" onclick="toggleMark('${q.id}',${i})" style="font-size:11px">${marked?'取消标记':'标记此题'}</button>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        ${isSpecialMode&&isAnswered(q)?nextBtn.replace('确认并下一题','保存并下一题'):`<button class="btn btn-sm" onclick="toggleMark('${q.id}',${i})" style="font-size:11px">${marked?'取消标记':'标记此题'}</button>`}
       </div>`;
   }
   return '';
@@ -908,7 +953,7 @@ function submitExam(){
     let status='unanswered',got=0;
     if(q.type==='single'||q.type==='judge'){
       if(ua&&ua===q.answer){status='correct';got=q.score;correct++;}
-      else if(ua){status='wrong';wrong++;}
+      else if(ua){status='wrong';wrong++;saveToWrongs(q,ua);}
     } else if(q.type==='multi'){
       const uaStr=(Array.isArray(ua)?ua.join(''):ua||'').toUpperCase().split('').sort().join('');
       const saStr=q.answer.toUpperCase().split('').sort().join('');
@@ -916,14 +961,14 @@ function submitExam(){
       else if(ua&&ua.length>0){
         const hit=saStr.split('').filter(c=>uaStr.includes(c)).length;
         got=Math.floor(q.score*hit/saStr.length);
-        if(hit>0&&hit<saStr.length){status='partial';partial++;got=Math.max(got,Math.floor(q.score*0.3));}
-        else{status='wrong';wrong++;}
+        if(hit>0&&hit<saStr.length){status='partial';partial++;saveToWrongs(q,ua);}
+        else{status='wrong';wrong++;saveToWrongs(q,ua);}
       }
     } else if(q.type==='fill'){
       const ua2=(ua||'').trim().toLowerCase();
       const sa2=(q.answer||'').trim().toLowerCase();
       if(ua2&&(ua2===sa2||sa2.split(/[,，]/).map(s=>s.trim()).includes(ua2))){status='correct';got=q.score;correct++;}
-      else if(ua2){status='wrong';wrong++;}
+      else if(ua2){status='wrong';wrong++;saveToWrongs(q,ua);}
     } else if(q.type==='essay'){
       const ua2=(ua||'').toLowerCase();
       if(!ua2){status='unanswered';} else {
@@ -931,7 +976,7 @@ function submitExam(){
         const hit=kw.filter(k=>ua2.includes(k)).length;
         got=Math.round(q.score*(kw.length?hit/kw.length:0)*0.8);
         status=kw.length>0?(hit/kw.length>0.6?'correct':hit>0?'partial':'wrong'):'wrong';
-        if(status==='correct')correct++;else if(status!=='unanswered'){wrong++;partial++;}
+        if(status==='correct')correct++;else if(status!=='unanswered'){wrong++;partial++;saveToWrongs(q,ua);}
       }
     }
     totalScore+=got;
@@ -940,11 +985,23 @@ function submitExam(){
     return {type:q.type,content:q.content,options:q.options,ua:uaDisplay,correctAns:q.answer,explain:q.explain,status,got,max:q.score};
   });
 
-  const passed=totalScore>=currentPaper.pass;
+  // 保存无尽模式或错题库记录
+  if(isEndlessMode||isWrongPractice){
+    const wrongs=JSON.parse(localStorage.getItem('exam_endless_records')||'[]');
+    wrongs.push({time:Date.now(),correct,wrong,partial,total:currentQuestions.length,duration:durationStr});
+    localStorage.setItem('exam_endless_records',JSON.stringify(wrongs.slice(-50)));
+  }
+  
+  const passed=currentPaper.pass>0?totalScore>=currentPaper.pass:false;
   const record={id:'r'+Date.now(),userId:currentUser.id,userName:currentUser.name,
     paperId:currentPaper.id,paperName:currentPaper.name,score:totalScore,total:currentPaper.total,
     pass:currentPaper.pass,passed,correct,wrong,partial,duration:durationStr,details,time:new Date().toLocaleString()};
   const records=DB.records();records.push(record);DB.set('records',records);
+  
+  // 重置模式标记
+  isEndlessMode=false;
+  isWrongPractice=false;
+  
   showResult(record);
 }
 
@@ -999,6 +1056,218 @@ function createConfetti(){
     setTimeout(()=>c.remove(),5000);
   }
 }
+
+// ========== 无尽模式 ==========
+let isEndlessMode=false;
+let endlessCurrentIndex=0;
+
+function startEndless(){
+  const allQs=DB.questions();
+  if(!allQs.length){showToast('题库为空，请先添加题目','error');return;}
+  
+  isEndlessMode=true;
+  endlessCurrentIndex=0;
+  currentPaper={id:'endless',name:'无尽模式',duration:60,total:allQs.length*2,pass:0,desc:'挑战全题库！'};
+  currentQuestions=allQs;
+  userAnswers={};
+  reviewMarks=new Set();
+  timeLeft=60*60; // 默认60分钟
+  startTime=Date.now();
+  
+  showPage('examPage');
+  $('examTitle').textContent='无尽模式 · 挑战全题库';
+  $('examInfo').textContent=`共 ${allQs.length} 题 · 答完为止`;
+  $('examIntro').innerHTML=`
+    <h2>无尽模式</h2>
+    <p>挑战全题库！一直作答直到题库刷完，中途退出自动保存并评分</p>
+    <div class="exam-rules">
+      <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>60 分钟</span>
+      <span><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/></svg>${allQs.length} 题</span>
+      <span><svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/></svg>无尽挑战</span>
+    </div>`;
+  
+  $('total').textContent=allQs.length;
+  renderQuestions();
+  startTimer();
+  window.onbeforeunload=e=>{e.preventDefault();e.returnValue='考试进行中，离开将丢失答题进度！';};
+}
+
+// ========== 错题库复习 ==========
+let isWrongPractice=false;
+
+function startWrongPractice(){
+  const wrongs=JSON.parse(localStorage.getItem('exam_wrongs')||'[]');
+  if(!wrongs.length){showToast('暂无错题记录','info');return;}
+  
+  // 将错题ID转换为完整题目
+  const allQs=DB.questions();
+  const wrongQs=wrongs.map(w=>allQs.find(q=>q.id===w.id)||w).filter(Boolean);
+  
+  if(!wrongQs.length){showToast('错题对应的题目已不存在','error');return;}
+  
+  isWrongPractice=true;
+  currentPaper={id:'wrongs',name:'错题库复习',duration:wrongQs.length*2,total:wrongQs.reduce((s,q)=>s+(q.score||2),0),pass:0,desc:'针对之前做错的题目进行复习'};
+  currentQuestions=wrongQs;
+  userAnswers={};
+  reviewMarks=new Set();
+  timeLeft=wrongQs.length*2*60;
+  startTime=Date.now();
+  
+  showPage('examPage');
+  $('examTitle').textContent='错题库 · 针对性复习';
+  $('examInfo').textContent=`共 ${wrongQs.length} 道错题`;
+  $('examIntro').innerHTML=`
+    <h2>错题库复习</h2>
+    <p>针对之前做错的题目进行复习，直到完全掌握</p>
+    <div class="exam-rules">
+      <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${wrongQs.length*2} 分钟</span>
+      <span><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/></svg>${wrongQs.length} 题</span>
+      <span><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>查漏补缺</span>
+    </div>`;
+  
+  $('total').textContent=wrongQs.length;
+  renderQuestions();
+  startTimer();
+  window.onbeforeunload=e=>{e.preventDefault();e.returnValue='考试进行中，离开将丢失答题进度！';};
+}
+
+// ========== 保存错题 ==========
+function saveToWrongs(question,userAnswer){
+  const wrongs=JSON.parse(localStorage.getItem('exam_wrongs')||'[]');
+  // 检查是否已存在
+  const existingIndex=wrongs.findIndex(w=>w.id===question.id);
+  if(existingIndex>=0){
+    // 更新已有错题
+    wrongs[existingIndex]={
+      ...wrongs[existingIndex],
+      userAnswer,
+      time:Date.now()
+    };
+  } else {
+    // 添加新错题
+    wrongs.push({
+      id:question.id,
+      type:question.type,
+      content:question.content,
+      options:question.options,
+      answer:question.answer,
+      explain:question.explain,
+      userAnswer,
+      reason:getWrongReason(question,userAnswer),
+      time:Date.now()
+    });
+  }
+  localStorage.setItem('exam_wrongs',JSON.stringify(wrongs));
+}
+
+function getWrongReason(question,userAnswer){
+  if(question.type==='single'||question.type==='judge'){
+    return `你的答案"${userAnswer}"，正确答案"${question.answer}"`;
+  } else if(question.type==='multi'){
+    return `你的答案"${userAnswer.join('')}"，正确答案"${question.answer}"`;
+  } else {
+    return question.explain||'答案不匹配';
+  }
+}
+
+// ========== 答对下一题 ==========
+function checkAndNext(qid,i){
+  const q=currentQuestions[i];
+  const ua=userAnswers[qid];
+  
+  if(ua===undefined||ua===null||ua===''){
+    showToast('请先作答本题','warning');
+    return;
+  }
+  
+  // 判断是否正确
+  let isCorrect=false;
+  if(q.type==='single'||q.type==='judge'){
+    isCorrect=ua===q.answer;
+  } else if(q.type==='multi'){
+    const uaStr=(Array.isArray(ua)?ua.join(''):'').toUpperCase().split('').sort().join('');
+    const ansStr=q.answer.toUpperCase().split('').sort().join('');
+    isCorrect=uaStr===ansStr;
+  } else if(q.type==='fill'){
+    const ua2=(ua||'').trim().toLowerCase();
+    const ans2=(q.answer||'').trim().toLowerCase();
+    isCorrect=ua2===ans2||ans2.split(/[,，]/).map(s=>s.trim()).includes(ua2);
+  } else {
+    // 简答题不自动判断
+    if(i<currentQuestions.length-1){
+      scrollToQ(i+1);
+    } else {
+      showToast('已是最后一题，请提交试卷','info');
+    }
+    return;
+  }
+  
+  if(isCorrect){
+    // 答对了，保存到正确答案库并进入下一题
+    showToast('✓ 回答正确！','success');
+    if(i<currentQuestions.length-1){
+      setTimeout(()=>scrollToQ(i+1),300);
+    } else {
+      showToast('所有题目已完成，请提交试卷','success');
+    }
+  } else {
+    // 答错了，保存到错题库并显示原因
+    saveToWrongs(q,Array.isArray(ua)?ua.join(''):ua);
+    showToast('✗ 回答错误，已加入错题库','error');
+    // 显示提示
+    showWrongTip(q);
+  }
+}
+
+function showWrongTip(q){
+  const tip=q.explain||`正确答案：${q.answer}`;
+  const modal=document.createElement('div');
+  modal.className='modal-overlay show';
+  modal.innerHTML=`
+    <div class="modal-box" style="max-width:400px">
+      <h3 style="color:var(--red);margin-bottom:12px">✗ 回答错误</h3>
+      <p style="margin-bottom:16px">${tip}</p>
+      <button class="modal-btn" onclick="this.closest('.modal-overlay').remove();scrollToNextAvailable();">下一题</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function scrollToNextAvailable(){
+  for(let i=0;i<currentQuestions.length;i++){
+    if(!isAnswered(currentQuestions[i])){
+      scrollToQ(i);
+      return;
+    }
+  }
+  showToast('所有题目已完成，请提交试卷','success');
+}
+
+// ========== 修改答题选项以支持即时反馈 ==========
+const originalSelectSingle=selectSingle;
+selectSingle=function(qid,i,val){
+  originalSelectSingle(qid,i,val);
+  // 无尽模式或错题库模式下，答题后自动判断
+  if(isEndlessMode||isWrongPractice){
+    checkAndNext(qid,i);
+  }
+};
+
+const originalToggleMulti=toggleMulti;
+toggleMulti=function(qid,i,val){
+  originalToggleMulti(qid,i,val);
+  if(isEndlessMode||isWrongPractice){
+    // 多选题需要用户确认
+  }
+};
+
+const originalSelectJudge=selectJudge;
+selectJudge=function(qid,i,val){
+  originalSelectJudge(qid,i,val);
+  if(isEndlessMode||isWrongPractice){
+    checkAndNext(qid,i);
+  }
+};
 
 function backHome(){
   showStudentHome();

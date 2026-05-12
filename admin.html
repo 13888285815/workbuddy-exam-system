@@ -144,6 +144,29 @@ textarea{resize:vertical;min-height:80px}
   .nav-item{justify-content:center;padding:12px}
   .content{padding:16px}
 }
+/* Trash & Cleanup Styles */
+.trash-list{display:flex;flex-direction:column;gap:8px}
+.trash-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)}
+.trash-item .icon{font-size:24px}
+.trash-item .info{flex:1}
+.trash-item .name{font-weight:500;color:var(--text)}
+.trash-item .meta{font-size:12px;color:var(--text3);margin-top:2px}
+.trash-item .actions{display:flex;gap:6px}
+.cleanup-section{padding:16px;background:var(--bg);border-radius:8px;margin-bottom:12px}
+.cleanup-section h4{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px}
+.cleanup-section p{font-size:12px;color:var(--text3)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{background:#c0392b}
+.btn-warning{background:var(--amber);color:#fff}
+.btn-warning:hover{background:#d68910}
+.wrong-analysis{display:flex;flex-direction:column;gap:12px}
+.wrong-item{padding:12px;background:var(--red-light);border-radius:8px;border-left:3px solid var(--red)}
+.wrong-item .q-content{font-weight:500;margin-bottom:6px}
+.wrong-item .q-answer{font-size:12px;color:var(--text2)}
+.wrong-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px}
+.wrong-stat{padding:12px;background:var(--bg);border-radius:8px;text-align:center}
+.wrong-stat .value{font-size:24px;font-weight:600;color:var(--red)}
+.wrong-stat .label{font-size:12px;color:var(--text3)}
 </style>
 </head>
 <body>
@@ -192,6 +215,14 @@ textarea{resize:vertical;min-height:80px}
       <div class="nav-item" onclick="showPage('records')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         <span>成绩统计</span>
+      </div>
+      <div class="nav-item" onclick="showPage('trash')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        <span>回收站</span>
+      </div>
+      <div class="nav-item" onclick="showPage('cleanup')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <span>数据清理</span>
       </div>
     </div>
     <div class="sidebar-footer">
@@ -401,6 +432,95 @@ C. 选项三
         </div>
       </div>
 
+      <!-- Trash -->
+      <div id="page-trash" class="page">
+        <div class="panel">
+          <div class="panel-header">
+            <h3>回收站</h3>
+            <button class="btn btn-sm btn-danger" onclick="showPwdConfirm('clearTrash',null,'确认清空回收站？此操作不可恢复！')">清空回收站</button>
+          </div>
+          <div class="panel-body">
+            <div id="trashList" class="trash-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cleanup -->
+      <div id="page-cleanup" class="page">
+        <div class="panel">
+          <div class="panel-header"><h3>数据清理</h3></div>
+          <div class="panel-body">
+            <div class="cleanup-section">
+              <h4>题库清理</h4>
+              <p>将题库数据移入回收站（可恢复）</p>
+              <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+                <input type="password" id="cleanup-q-pwd" placeholder="输入管理员密码" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:6px">
+                <button class="btn btn-warning" onclick="moveToTrash('questions')">删除题库</button>
+              </div>
+              <p style="margin-top:8px;font-size:12px;color:var(--text3)">当前题库：<span id="cleanup-q-count">0</span> 道题目</p>
+            </div>
+            <div class="cleanup-section">
+              <h4>试卷清理</h4>
+              <p>将试卷数据移入回收站（可恢复）</p>
+              <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+                <input type="password" id="cleanup-p-pwd" placeholder="输入管理员密码" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:6px">
+                <button class="btn btn-warning" onclick="moveToTrash('papers')">删除试卷</button>
+              </div>
+              <p style="margin-top:8px;font-size:12px;color:var(--text3)">当前试卷：<span id="cleanup-p-count">0</span> 份</p>
+            </div>
+            <div class="cleanup-section">
+              <h4>评分记录清理</h4>
+              <p>将考试评分记录移入回收站（可恢复）</p>
+              <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+                <input type="password" id="cleanup-r-pwd" placeholder="输入管理员密码" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:6px">
+                <button class="btn btn-warning" onclick="moveToTrash('records')">删除记录</button>
+              </div>
+              <p style="margin-top:8px;font-size:12px;color:var(--text3)">当前记录：<span id="cleanup-r-count">0</span> 条</p>
+            </div>
+            <div class="cleanup-section">
+              <h4>计时数据清理</h4>
+              <p>清理考试计时相关临时数据</p>
+              <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+                <input type="password" id="cleanup-t-pwd" placeholder="输入管理员密码" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:6px">
+                <button class="btn btn-warning" onclick="moveToTrash('timers')">清理计时</button>
+              </div>
+              <p style="margin-top:8px;font-size:12px;color:var(--text3)">清理 localStorage 中的计时数据</p>
+            </div>
+            <div class="cleanup-section">
+              <h4>错题库清理</h4>
+              <p>将错题库数据移入回收站（可恢复）</p>
+              <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+                <input type="password" id="cleanup-w-pwd" placeholder="输入管理员密码" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:6px">
+                <button class="btn btn-warning" onclick="moveToTrash('wrongs')">删除错题库</button>
+              </div>
+              <p style="margin-top:8px;font-size:12px;color:var(--text3)">当前错题：<span id="cleanup-w-count">0</span> 道</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:20px">
+          <div class="panel-header"><h3>错误分析</h3></div>
+          <div class="panel-body">
+            <div id="wrongAnalysis" class="wrong-analysis"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Password Confirm Modal -->
+<div class="modal-overlay" id="pwdConfirmModal">
+  <div class="modal" style="width:400px">
+    <div class="modal-header"><h3>身份验证</h3><button class="modal-close" onclick="closePwdConfirm()">×</button></div>
+    <div class="modal-body">
+      <p id="pwdConfirmMsg" style="margin-bottom:16px;color:var(--text2)">请输入管理员密码确认操作</p>
+      <input type="password" id="pwdConfirmInput" placeholder="输入管理员密码" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closePwdConfirm()">取消</button>
+      <button class="btn btn-primary" onclick="confirmPwdAction()">确认</button>
     </div>
   </div>
 </div>
@@ -554,15 +674,17 @@ function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  const titles={dashboard:'控制台',users:'用户管理',import:'PDF导入',questions:'题库管理',papers:'试卷管理',records:'成绩统计'};
+  const titles={dashboard:'控制台',users:'用户管理',import:'PDF导入',questions:'题库管理',papers:'试卷管理',records:'成绩统计',trash:'回收站',cleanup:'数据清理'};
   document.getElementById('pageTitle').textContent=titles[name]||name;
-  const idx={dashboard:0,users:1,import:2,questions:3,papers:4,records:5};
+  const idx={dashboard:0,users:1,import:2,questions:3,papers:4,records:5,trash:6,cleanup:7};
   document.querySelectorAll('.nav-item')[idx[name]]?.classList.add('active');
   if(name==='dashboard')renderDashboard();
   if(name==='users')renderUsers();
   if(name==='questions')renderQuestions();
   if(name==='papers')renderPapers();
   if(name==='records')renderRecords();
+  if(name==='trash')renderTrash();
+  if(name==='cleanup')renderCleanup();
 }
 
 // ===================== DASHBOARD =====================
@@ -1166,6 +1288,226 @@ function showToast(msg,type='success'){
   t.className='toast '+type;t.textContent=msg;wrap.appendChild(t);
   requestAnimationFrame(()=>{requestAnimationFrame(()=>{t.classList.add('show');});});
   setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3000);
+}
+
+// ===================== PASSWORD CONFIRM =====================
+let pwdConfirmCallback=null;
+let pwdConfirmType=null;
+let pwdConfirmTarget=null;
+
+function showPwdConfirm(type,target,msg){
+  pwdConfirmType=type;
+  pwdConfirmTarget=target;
+  document.getElementById('pwdConfirmMsg').textContent=msg||'请输入管理员密码确认操作';
+  document.getElementById('pwdConfirmInput').value='';
+  document.getElementById('pwdConfirmModal').classList.add('show');
+  document.getElementById('pwdConfirmInput').focus();
+}
+
+function closePwdConfirm(){
+  document.getElementById('pwdConfirmModal').classList.remove('show');
+  pwdConfirmCallback=null;
+  pwdConfirmType=null;
+  pwdConfirmTarget=null;
+}
+
+function confirmPwdAction(){
+  const pwd=document.getElementById('pwdConfirmInput').value;
+  const admin=DB.users().find(u=>u.role==='admin');
+  if(!admin||admin.password!==pwd){
+    showToast('管理员密码错误','error');
+    return;
+  }
+  closePwdConfirm();
+  // 执行对应操作
+  if(pwdConfirmType==='clearTrash'){
+    clearTrash();
+  } else if(pwdConfirmType==='restore'){
+    restoreFromTrash(pwdConfirmTarget);
+  } else if(pwdConfirmType==='deletePermanent'){
+    deletePermanent(pwdConfirmTarget);
+  }
+}
+
+// ===================== TRASH =====================
+function getTrash(){
+  return JSON.parse(localStorage.getItem('exam_trash')||'[]');
+}
+
+function saveTrash(trash){
+  localStorage.setItem('exam_trash',JSON.stringify(trash));
+}
+
+function moveToTrash(type){
+  const pwdInput=document.getElementById('cleanup-'+type.charAt(0)+'-pwd');
+  if(!pwdInput){
+    showToast('未找到密码输入框','error');
+    return;
+  }
+  const pwd=pwdInput.value;
+  const admin=DB.users().find(u=>u.role==='admin');
+  if(!admin||admin.password!==pwd){
+    showToast('管理员密码错误','error');
+    return;
+  }
+  
+  let data={type,items:[],time:Date.now()};
+  switch(type){
+    case 'questions':
+      data.items=DB.questions();
+      DB.set('questions',[]);
+      break;
+    case 'papers':
+      data.items=DB.papers();
+      DB.set('papers',[]);
+      break;
+    case 'records':
+      data.items=DB.records();
+      DB.set('records',[]);
+      break;
+    case 'timers':
+      // 清理计时数据
+      Object.keys(localStorage).forEach(k=>{
+        if(k.startsWith('exam_timer_')||k.startsWith('exam_answers_')||k.startsWith('exam_state_')){
+          localStorage.removeItem(k);
+        }
+      });
+      showToast('计时数据已清理','success');
+      renderCleanup();
+      return;
+    case 'wrongs':
+      data.items=JSON.parse(localStorage.getItem('exam_wrongs')||'[]');
+      localStorage.setItem('exam_wrongs','[]');
+      break;
+  }
+  
+  if(data.items.length===0){
+    showToast('没有数据可删除','warning');
+    return;
+  }
+  
+  const trash=getTrash();
+  trash.push(data);
+  saveTrash(trash);
+  showToast(`已移入回收站（${data.items.length}条）`,'success');
+  renderCleanup();
+}
+
+function renderTrash(){
+  const trash=getTrash();
+  const container=document.getElementById('trashList');
+  if(trash.length===0){
+    container.innerHTML='<div class="empty">回收站为空</div>';
+    return;
+  }
+  container.innerHTML=trash.map((t,i)=>`
+    <div class="trash-item">
+      <div class="icon">🗑️</div>
+      <div class="info">
+        <div class="name">${getTypeName(t.type)}</div>
+        <div class="meta">${t.items.length}条数据 · ${new Date(t.time).toLocaleString()}</div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-sm" onclick="showPwdConfirm('restore','${i}','确认恢复此数据？')">恢复</button>
+        <button class="btn btn-sm btn-danger" onclick="showPwdConfirm('deletePermanent','${i}','确认永久删除？此操作不可恢复！')">删除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function getTypeName(type){
+  const names={questions:'题库',papers:'试卷',records:'评分记录',wrongs:'错题库',timers:'计时数据'};
+  return names[type]||type;
+}
+
+function restoreFromTrash(index){
+  const trash=getTrash();
+  if(index<0||index>=trash.length){
+    showToast('数据不存在','error');
+    return;
+  }
+  const item=trash[index];
+  switch(item.type){
+    case 'questions':
+      DB.set('questions',item.items);
+      break;
+    case 'papers':
+      DB.set('papers',item.items);
+      break;
+    case 'records':
+      DB.set('records',item.items);
+      break;
+    case 'wrongs':
+      localStorage.setItem('exam_wrongs',JSON.stringify(item.items));
+      break;
+  }
+  trash.splice(index,1);
+  saveTrash(trash);
+  showToast('数据已恢复','success');
+  renderTrash();
+}
+
+function deletePermanent(index){
+  const trash=getTrash();
+  if(index<0||index>=trash.length){
+    showToast('数据不存在','error');
+    return;
+  }
+  trash.splice(index,1);
+  saveTrash(trash);
+  showToast('已永久删除','success');
+  renderTrash();
+}
+
+function clearTrash(){
+  saveTrash([]);
+  showToast('回收站已清空','success');
+  renderTrash();
+}
+
+// ===================== CLEANUP =====================
+function renderCleanup(){
+  document.getElementById('cleanup-q-count').textContent=DB.questions().length;
+  document.getElementById('cleanup-p-count').textContent=DB.papers().length;
+  document.getElementById('cleanup-r-count').textContent=DB.records().length;
+  document.getElementById('cleanup-w-count').textContent=(JSON.parse(localStorage.getItem('exam_wrongs')||'[]')).length;
+  renderWrongAnalysis();
+}
+
+// ===================== WRONG ANALYSIS =====================
+function renderWrongAnalysis(){
+  const wrongs=JSON.parse(localStorage.getItem('exam_wrongs')||'[]');
+  const questions=DB.questions();
+  const container=document.getElementById('wrongAnalysis');
+  
+  if(wrongs.length===0){
+    container.innerHTML='<div class="empty">暂无错题记录</div>';
+    return;
+  }
+  
+  // 按题目类型统计
+  const stats={single:0,multi:0,judge:0,fill:0,essay:0};
+  wrongs.forEach(w=>{if(stats[w.type]!==undefined)stats[w.type]++;});
+  
+  container.innerHTML=`
+    <div class="wrong-stats">
+      <div class="wrong-stat"><div class="value">${wrongs.length}</div><div class="label">总错题数</div></div>
+      <div class="wrong-stat"><div class="value">${stats.single}</div><div class="label">单选题</div></div>
+      <div class="wrong-stat"><div class="value">${stats.multi}</div><div class="label">多选题</div></div>
+      <div class="wrong-stat"><div class="value">${stats.judge}</div><div class="label">判断题</div></div>
+    </div>
+    <h4 style="margin-bottom:12px">错题详情</h4>
+    ${wrongs.slice(0,10).map(w=>{
+      const q=questions.find(q=>q.id===w.id)||{};
+      return `
+      <div class="wrong-item">
+        <div class="q-content">${w.content||q.content||'题目已删除'}</div>
+        <div class="q-answer">你的答案: ${w.userAnswer||'无'} | 正确答案: ${w.correctAnswer||q.answer||'无'}</div>
+        ${w.reason?'<div style="font-size:12px;color:var(--text3);margin-top:4px">原因: '+w.reason+'</div>':''}
+      </div>
+    `}).join('')}
+    ${wrongs.length>10?'<p style="text-align:center;color:var(--text3);margin-top:12px">还有 '+(wrongs.length-10)+' 道错题...</p>':''}
+  `;
 }
 
 // ===================== PAPER MODAL OPEN =====================
