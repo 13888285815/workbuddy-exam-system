@@ -402,8 +402,14 @@ C. 选项三
         <div class="panel">
           <div class="panel-header">
             <h3>题库管理</h3>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
               <span id="qTotalBadge" class="badge badge-blue" style="padding:5px 12px;font-size:12px"></span>
+              <span id="qSelectedBadge" class="badge badge-amber" style="padding:5px 12px;font-size:12px;display:none"></span>
+            </div>
+          </div>
+          <div style="padding:12px 16px;background:var(--bg);border-radius:8px;margin:0 16px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <input id="qSearch" type="text" placeholder="搜索题目内容..." style="width:200px;padding:6px 10px;font-size:12px;border-radius:6px" oninput="renderQuestions()">
               <select id="qFilterType" onchange="renderQuestions()" style="width:120px;padding:6px 10px;font-size:12px;border-radius:6px">
                 <option value="">全部类型</option>
                 <option value="single">单选题</option>
@@ -412,9 +418,12 @@ C. 选项三
                 <option value="fill">填空题</option>
                 <option value="essay">简答题</option>
               </select>
-              <input id="qSearch" type="text" placeholder="搜索题目..." style="width:180px;padding:6px 10px;font-size:12px;border-radius:6px" oninput="renderQuestions()">
-              <button class="btn btn-sm btn-danger" onclick="showPwdConfirm('clearAllQuestions',null,'确认清空全部题库？此操作不可恢复！')">清空题库</button>
-              <button class="btn btn-primary btn-sm" onclick="openAddQuestion()">+ 添加题目</button>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:6px 10px;background:white;border-radius:6px">
+                <input type="checkbox" id="qSelectAll" onchange="toggleSelectAllQuestions()" style="width:16px;height:16px"> 全选
+              </label>
+              <button class="btn btn-sm btn-danger" onclick="batchDeleteQuestions()" id="btnBatchDelete" style="display:none">批量删除 (0)</button>
+              <button class="btn btn-sm" onclick="openAddQuestion()">+ 添加题目</button>
+              <button class="btn btn-sm btn-outline" onclick="showPwdConfirm('clearAllQuestions',null,'确认清空全部题库？此操作不可恢复！')">清空题库</button>
             </div>
           </div>
           <div class="panel-body">
@@ -1339,6 +1348,8 @@ function switchTab(tabEl,contentId){
 
 // ===================== QUESTIONS =====================
 let editingQId=null;
+let selectedQuestionIds=new Set();
+
 function renderQuestions(){
   let qs=DB.questions();
   document.getElementById('qTotalBadge').textContent='共 '+qs.length+' 道题目';
@@ -1348,9 +1359,10 @@ function renderQuestions(){
   if(search)qs=qs.filter(q=>q.content.toLowerCase().includes(search));
   const typeLabel={single:'单选',multi:'多选',judge:'判断',fill:'填空',essay:'简答'};
   const badgeClass={single:'badge-blue',multi:'badge-amber',judge:'badge-green',fill:'badge-gray',essay:'badge-red'};
-  document.getElementById('questionList').innerHTML=qs.length?qs.map(q=>`
-    <div class="q-item">
+  document.getElementById('questionList').innerHTML=qs.length?qs.map((q,i)=>`
+    <div class="q-item" data-id="${q.id}" style="border-left:3px solid ${badgeClass[q.type]?badgeClass[q.type].replace('badge-',''):'var(--blue)'}">
       <div class="q-meta">
+        <input type="checkbox" class="q-cb" data-id="${q.id}" onchange="updateQuestionSelection()" ${selectedQuestionIds.has(q.id)?'checked':''} style="width:18px;height:18px;margin-right:8px;cursor:pointer">
         <span class="q-type">${typeLabel[q.type]||q.type}</span>
         <span class="q-score">${q.score}分</span>
         <span style="flex:1"></span>
@@ -1360,7 +1372,62 @@ function renderQuestions(){
       <div class="q-text">${q.content}</div>
       ${q.options&&q.options.length?`<div class="q-options" style="margin-top:6px">${q.options.map(o=>`<div class="q-option ${q.answer&&q.answer.split('').some(c=>o.startsWith(c))?'correct':''}">${o}</div>`).join('')}</div>`:''}
       ${q.answer?`<div class="q-answer">答案：${q.answer}</div>`:''}
+      ${q.explain?`<div style="font-size:12px;color:var(--text3);margin-top:4px">解析：${q.explain}</div>`:''}
     </div>`).join(''):'<div class="empty">暂无题目，请先通过PDF导入或手动添加</div>';
+  // 更新全选状态
+  const allCbs=document.querySelectorAll('.q-cb');
+  const checkedCount=document.querySelectorAll('.q-cb:checked').length;
+  document.getElementById('qSelectAll').checked=allCbs.length>0&&checkedCount===allCbs.length;
+  updateQuestionSelection();
+}
+
+// 更新题目选择状态
+function updateQuestionSelection(){
+  const checked=document.querySelectorAll('.q-cb:checked');
+  const count=checked.length;
+  const total=document.querySelectorAll('.q-cb').length;
+  selectedQuestionIds=new Set(Array.from(checked).map(cb=>cb.dataset.id));
+  const badge=document.getElementById('qSelectedBadge');
+  const btn=document.getElementById('btnBatchDelete');
+  if(badge){
+    if(count>0){
+      badge.style.display='inline-block';
+      badge.textContent='已选 '+count+' 道';
+    } else {
+      badge.style.display='none';
+    }
+  }
+  if(btn){
+    if(count>0){
+      btn.style.display='inline-block';
+      btn.textContent='批量删除 ('+count+')';
+    } else {
+      btn.style.display='none';
+    }
+  }
+}
+
+// 全选/取消全选题目
+function toggleSelectAllQuestions(){
+  const checked=document.getElementById('qSelectAll').checked;
+  document.querySelectorAll('.q-cb').forEach(cb=>cb.checked=checked);
+  updateQuestionSelection();
+}
+
+// 批量删除题目
+function batchDeleteQuestions(){
+  const count=selectedQuestionIds.size;
+  if(count===0){
+    showToast('请先选择要删除的题目','error');
+    return;
+  }
+  if(!confirm('确定要删除选中的 '+count+' 道题目吗？此操作不可恢复！'))return;
+  const ids=Array.from(selectedQuestionIds);
+  const questions=DB.questions().filter(q=>!ids.includes(q.id));
+  DB.set('questions',questions);
+  selectedQuestionIds=new Set();
+  renderQuestions();
+  showToast('已删除 '+count+' 道题目','success');
 }
 
 function openAddQuestion(){editingQId=null;document.getElementById('qModalTitle').textContent='添加题目';['qContent','qAnswer','qExplain'].forEach(id=>document.getElementById(id).value='');document.getElementById('qScore').value=2;document.getElementById('qType').value='single';renderQTypeFields();openModal('addQuestionModal');}
