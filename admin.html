@@ -1249,14 +1249,70 @@ function discardImport(){
   showToast('已放弃导入','info');
 }
 
-// 确认导入（带最终确认）
+// 检测题目数据是否有错误
+function validateQuestions(qs){
+  const errors=[];
+  const typeLabels={single:'单选题',multi:'多选题',judge:'判断题',fill:'填空题',essay:'简答题'};
+  // 乱码检测正则：包含大量连续特殊字符或不可见字符
+  const garblePattern=/[\u0000-\u001F\u0080-\u009F]{3,}|[\uAC00-\uD7AF]{10,}(?![\uAC00-\uD7AF])|[�]{2,}/;
+  // 特殊乱码：连续相同符号超过5个
+  const weirdPattern=/[—―─]{5,}|[……]{3,}|[啊啊啊啊]{4,}/;
+  qs.forEach((q,i)=>{
+    const idx=i+1;
+    const type=typeLabels[q.type]||'未知';
+    // 1. 检测乱码
+    if(garblePattern.test(q.content)||weirdPattern.test(q.content)){
+      errors.push({idx,type,field:'content',msg:'题目内容疑似乱码'});
+    }
+    // 2. 检测内容为空或过短
+    if(!q.content||q.content.trim().length<3){
+      errors.push({idx,type,field:'content',msg:'题目内容为空或过短'});
+    }
+    // 3. 选择题检测选项
+    if(q.type==='single'||q.type==='multi'){
+      if(!q.options||q.options.length<2){
+        errors.push({idx,type,field:'options',msg:'选项数量不足（需要至少2个选项）'});
+      } else {
+        // 检测选项是否为空
+        const emptyOpts=q.options.filter(o=>!o||o.replace(/^[A-Za-z][\.、\s　].*/,'').trim().length<1);
+        if(emptyOpts.length>0){
+          errors.push({idx,type,field:'options',msg:'存在空选项'});
+        }
+      }
+    }
+    // 4. 检测答案
+    if(!q.answer||q.answer.trim().length<1){
+      errors.push({idx,type,field:'answer',msg:'答案为空'});
+    }
+  });
+  return errors;
+}
+
+// 显示验证错误详情
+function showValidationErrors(errors){
+  const msg=errors.slice(0,5).map(e=>`第${e.idx}题（${e.type}）：${e.msg}`).join('\n');
+  const more=errors.length>5?'\n...还有 '+(errors.length-5)+' 处错误':'';
+  return {msg:msg+more,count:errors.length};
+}
+
+// 确认导入（带验证）
 function confirmImportQuestions(){
   const total=parsedQuestions.length;
   if(!total){
     showToast('没有可导入的题目','error');
     return;
   }
-  // 最终确认
+  // 自动验证数据
+  const errors=validateQuestions(parsedQuestions);
+  if(errors.length>0){
+    const result=showValidationErrors(errors);
+    const retry=confirm('⚠️ 检测到以下问题（共 '+result.count+' 处）：\n\n'+result.msg+'\n\n建议：取消本次导入，检查原文件格式后重新导入。\n\n点击"确定"放弃导入，点击"取消"继续导入（不推荐）');
+    if(retry){
+      discardImport();
+      return;
+    }
+  }
+  // 验证通过，最终确认
   const confirmed=confirm('您已检查预览，确认要导入 '+total+' 道题目到题库吗？\n\n点击"确定"开始导入，点击"取消"继续检查。');
   if(!confirmed)return;
   // 执行导入
