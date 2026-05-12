@@ -444,7 +444,10 @@ C. 选项三
         <div class="panel">
           <div class="panel-header">
             <h3>试卷管理</h3>
-            <button class="btn btn-primary btn-sm" onclick="openModal('addPaperModal')">+ 创建试卷</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-sm" onclick="openModal('importPaperModal')" style="background:var(--amber);color:white">📥 导入试卷</button>
+              <button class="btn btn-primary btn-sm" onclick="openModal('addPaperModal')">+ 创建试卷</button>
+            </div>
           </div>
           <div class="panel-body">
             <div id="paperList" class="exam-cards"></div>
@@ -554,6 +557,69 @@ C. 选项三
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- 试卷导入模态框 -->
+<div class="modal-overlay" id="importPaperModal">
+  <div class="modal" style="width:900px;max-width:95vw;max-height:90vh">
+    <div class="modal-header"><h3>📥 导入试卷（PDF/Word/Excel）</h3><button class="modal-close" onclick="closeImportPaperModal()">×</button></div>
+    <div class="modal-body" style="max-height:80vh;overflow-y:auto">
+      <!-- 上传区域 -->
+      <div class="upload-zone" id="paperUploadZone" onclick="document.getElementById('paperImportFile').click()" ondragover="onPaperDragOver(event)" ondragleave="onPaperDragLeave(event)" ondrop="onPaperDrop(event)" style="border:2px dashed var(--border);border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:all .2s">
+        <input type="file" id="paperImportFile" accept=".pdf,.txt,.md,.doc,.docx,.xls,.xlsx" onchange="handlePaperFileSelect(event)" style="display:none">
+        <div style="font-size:48px;margin-bottom:12px">📄</div>
+        <p style="font-size:15px"><strong>点击选择文件</strong> 或拖拽到此处</p>
+        <p style="color:var(--text3);margin-top:8px;font-size:13px">支持：PDF、Word(.docx)、Excel(.xlsx)、TXT、Markdown</p>
+        <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
+          <span style="background:var(--blue-light);color:var(--blue);padding:4px 12px;border-radius:20px;font-size:12px">PDF</span>
+          <span style="background:var(--blue-light);color:var(--blue);padding:4px 12px;border-radius:20px;font-size:12px">DOCX</span>
+          <span style="background:var(--green-light);color:var(--green);padding:4px 12px;border-radius:20px;font-size:12px">XLSX</span>
+          <span style="background:var(--bg);color:var(--text2);padding:4px 12px;border-radius:20px;font-size:12px">TXT</span>
+          <span style="background:var(--bg);color:var(--text2);padding:4px 12px;border-radius:20px;font-size:12px">MD</span>
+        </div>
+      </div>
+      <!-- 导入进度 -->
+      <div id="paperImportProgress" style="display:none;margin-top:20px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text2);margin-bottom:8px">
+          <span id="paperImportStatusText">正在解析...</span>
+          <span id="paperImportPct">0%</span>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;height:8px;overflow:hidden">
+          <div id="paperImportProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:8px;transition:width .3s"></div>
+        </div>
+      </div>
+      <!-- AI审题结果 -->
+      <div id="paperAIResult" style="display:none;margin-top:20px">
+        <div style="background:var(--amber-light);border-radius:12px;padding:16px;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <div style="width:36px;height:36px;background:var(--amber);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold">AI</div>
+            <div style="flex:1">
+              <div style="font-weight:600;color:var(--amber)">AI审题结果</div>
+              <div style="font-size:12px;color:var(--text2)" id="paperAISummary"></div>
+            </div>
+          </div>
+          <div id="paperAIAnalysis" style="font-size:13px;color:var(--text2);line-height:1.6;background:white;padding:12px;border-radius:8px;max-height:200px;overflow-y:auto"></div>
+        </div>
+      </div>
+      <!-- 解析预览 -->
+      <div id="paperPreviewPanel" style="display:none;margin-top:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <h4 style="margin:0">📋 试卷预览</h4>
+          <span id="paperPreviewCount" style="background:var(--blue-light);color:var(--blue);padding:4px 12px;border-radius:20px;font-size:12px"></span>
+        </div>
+        <div id="paperPreviewContent" style="background:var(--bg);border-radius:12px;padding:16px;max-height:400px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center">
+      <button class="btn" onclick="discardPaperImport()" id="btnDiscardPaperImport" style="display:none">放弃导入</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn" onclick="closeImportPaperModal()">取消</button>
+        <button class="btn btn-primary" onclick="confirmImportPaper()" id="btnConfirmImportPaper" disabled style="opacity:.5">
+          <span id="btnConfirmPaperText">确认导入试卷</span>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -2063,6 +2129,354 @@ function savePaper(){
 }
 function togglePaper(id){const papers=DB.papers();const p=papers.find(x=>x.id===id);if(p){p.status=p.status==='published'?'draft':'published';DB.set('papers',papers);renderPapers();showToast(p.status==='published'?'试卷已发布':'试卷已停用');}}
 function deletePaper(id){if(!confirm('确认删除该试卷？'))return;DB.set('papers',DB.papers().filter(p=>p.id!==id));renderPapers();showToast('试卷已删除');}
+
+// ===================== PAPER IMPORT =====================
+let paperImportData=null; // 存储解析后的试卷数据
+let paperAIResult=null; // AI审题结果
+let paperParsedQuestions=[]; // 解析出的题目
+
+function openImportPaperModal(){
+  paperImportData=null;
+  paperAIResult=null;
+  paperParsedQuestions=[];
+  resetPaperImportUI();
+  openModal('importPaperModal');
+}
+
+function closeImportPaperModal(){
+  closeModal('importPaperModal');
+  resetPaperImportUI();
+}
+
+function resetPaperImportUI(){
+  document.getElementById('paperImportFile').value='';
+  document.getElementById('paperImportProgress').style.display='none';
+  document.getElementById('paperAIResult').style.display='none';
+  document.getElementById('paperPreviewPanel').style.display='none';
+  document.getElementById('btnDiscardPaperImport').style.display='none';
+  document.getElementById('btnConfirmImportPaper').disabled=true;
+  document.getElementById('btnConfirmImportPaper').style.opacity='0.5';
+  document.getElementById('paperUploadZone').style.border='2px dashed var(--border)';
+}
+
+function discardPaperImport(){
+  if(!confirm('确定要放弃导入吗？'))return;
+  resetPaperImportUI();
+  showToast('已放弃导入','info');
+}
+
+// 拖拽事件
+function onPaperDragOver(e){e.preventDefault();document.getElementById('paperUploadZone').classList.add('drag');}
+function onPaperDragLeave(){document.getElementById('paperUploadZone').classList.remove('drag');}
+function onPaperDrop(e){
+  e.preventDefault();
+  document.getElementById('paperUploadZone').classList.remove('drag');
+  const f=e.dataTransfer.files[0];
+  if(f)processPaperImportFile(f);
+}
+function handlePaperFileSelect(e){
+  const f=e.target.files[0];
+  if(f)processPaperImportFile(f);
+}
+
+// 处理试卷文件
+async function processPaperImportFile(file){
+  paperImportData={fileName:file.name,questions:[],parsed:false};
+  paperAIResult=null;
+  paperParsedQuestions=[];
+  
+  const fileName=file.name.toLowerCase();
+  const ext=fileName.split('.').pop();
+  
+  document.getElementById('paperImportProgress').style.display='block';
+  document.getElementById('paperAIResult').style.display='none';
+  document.getElementById('paperPreviewPanel').style.display='none';
+  document.getElementById('btnDiscardPaperImport').style.display='none';
+  
+  try{
+    if(ext==='pdf'){
+      await processPaperPDF(file);
+    } else if(ext==='docx'){
+      await processPaperDocx(file);
+    } else if(ext==='xls'||ext==='xlsx'){
+      await processPaperExcel(file);
+    } else {
+      await processPaperText(file);
+    }
+  } catch(err){
+    console.error('处理文件错误:',err);
+    showToast('文件处理失败：'+err.message,'error');
+    document.getElementById('paperImportProgress').style.display='none';
+  }
+}
+
+// PDF处理（OCR+AI）
+async function processPaperPDF(file){
+  updatePaperImportProgress('正在提取PDF文字...',10);
+  let pdfText='';
+  try{
+    const arrayBuffer=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const content=await page.getTextContent();
+      pdfText+=content.items.map(item=>item.str).join(' ')+'\n';
+      updatePaperImportProgress(`正在提取第 ${i}/${pdf.numPages} 页...`,10+i*70/pdf.numPages);
+    }
+  } catch(e){
+    console.error('PDF提取失败:',e);
+  }
+  
+  // 如果PDF文字不足，尝试OCR
+  if(pdfText.trim().length<100){
+    updatePaperImportProgress('PDF文字不足，启用OCR增强...',30);
+    try{
+      const arrayBuffer=await file.arrayBuffer();
+      const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+      const canvas=document.createElement('canvas');
+      const ctx=canvas.getContext('2d');
+      for(let i=1;i<=Math.min(pdf.numPages,5);i++){
+        const page=await pdf.getPage(i);
+        const viewport=page.getViewport({scale:2});
+        canvas.width=viewport.width;
+        canvas.height=viewport.height;
+        await page.render({canvasContext:ctx,viewport}).promise;
+        const imageData=canvas.toDataURL('image/png');
+        const result=await Tesseract.recognize(imageData,'chi_sim+eng');
+        pdfText+=result.data.text+'\n';
+        updatePaperImportProgress(`OCR处理第 ${i}/${Math.min(pdf.numPages,5)} 页...`,30+i*20);
+      }
+    } catch(e){
+      console.error('OCR失败:',e);
+    }
+  }
+  
+  paperImportData.rawText=pdfText;
+  await analyzePaperWithAI(pdfText);
+}
+
+// Word处理
+async function processPaperDocx(file){
+  updatePaperImportProgress('正在解析Word文档...',20);
+  const arrayBuffer=await file.arrayBuffer();
+  const zip=await JSZip.loadAsync(arrayBuffer);
+  const content=await zip.file('word/document.xml')?.async('text')||'';
+  
+  // 提取文本
+  const textDiv=document.createElement('div');
+  textDiv.innerHTML=content.replace(/<[^>]+>/g,' ');
+  const pdfText=textDiv.textContent||'';
+  
+  paperImportData.rawText=pdfText;
+  await analyzePaperWithAI(pdfText);
+}
+
+// Excel处理
+async function processPaperExcel(file){
+  updatePaperImportProgress('正在解析Excel文件...',20);
+  const arrayBuffer=await file.arrayBuffer();
+  const workbook=XLSX.read(arrayBuffer,{type:'array'});
+  let allText='';
+  workbook.SheetNames.forEach(name=>{
+    const sheet=workbook.Sheets[name];
+    allText+=XLSX.utils.sheet_to_csv(sheet)+'\n';
+  });
+  
+  paperImportData.rawText=allText;
+  await analyzePaperWithAI(allText);
+}
+
+// 文本处理
+async function processPaperText(file){
+  updatePaperImportProgress('正在读取文件...',20);
+  const text=await file.text();
+  paperImportData.rawText=text;
+  await analyzePaperWithAI(text);
+}
+
+// AI审题分析
+async function analyzePaperWithAI(text){
+  updatePaperImportProgress('正在进行AI审题...',80);
+  
+  // 本地智能分析
+  const analysis=analyzePaperContent(text);
+  paperAIResult=analysis;
+  
+  // 显示AI审题结果
+  showPaperAIResult(analysis);
+  
+  // 解析题目
+  paperParsedQuestions=parseText(text);
+  
+  // 生成预览
+  showPaperPreview(analysis);
+  
+  updatePaperImportProgress('解析完成',100);
+  document.getElementById('btnDiscardPaperImport').style.display='';
+  document.getElementById('btnConfirmImportPaper').disabled=false;
+  document.getElementById('btnConfirmImportPaper').style.opacity='1';
+}
+
+// 本地智能审题
+function analyzePaperContent(text){
+  const lines=text.split('\n').filter(l=>l.trim());
+  const questions=[];
+  let currentQ=null;
+  let currentOptions=[];
+  
+  for(const line of lines){
+    const trimmed=line.trim();
+    if(!trimmed)continue;
+    
+    // 检测是否为题目行
+    if(/^[（(]?\d+[.)）]/.test(trimmed)||/^第[一二三四五六七八九十百千万\d]+[题章节]/.test(trimmed)||/^\d+[.:：]/.test(trimmed)){
+      if(currentQ){
+        currentQ.options=[...currentOptions];
+        questions.push(currentQ);
+        currentOptions=[];
+      }
+      currentQ={content:trimmed,type:'single',issues:[]};
+    } else if(currentQ){
+      // 检测选项
+      if(/^[A-Ea-e][.、)）]/.test(trimmed)||/^[（(][A-Ea-e][）)]/.test(trimmed)){
+        currentOptions.push(trimmed);
+      } else if(/^答案[：:]/i.test(trimmed)||/^正确[答案]?[：:]/.test(trimmed)){
+        currentQ.answer=trimmed.replace(/^答案[：:]/i,'').replace(/^正确[答案]?[：:]/,'').trim();
+      } else if(trimmed.length<50&&!currentQ.content.includes(trimmed)){
+        // 可能的内容行
+        if(!currentQ.content.includes(trimmed)){
+          currentQ.content+=' '+trimmed;
+        }
+      }
+    }
+  }
+  if(currentQ){
+    currentQ.options=[...currentOptions];
+    questions.push(currentQ);
+  }
+  
+  // 分析质量
+  const issues=[];
+  questions.forEach((q,i)=>{
+    if(!q.content||q.content.length<5)issues.push(`第${i+1}题：内容过短`);
+    if(q.options.length===0&&(q.type==='single'||q.type==='multi')){
+      q.type='essay'; // 无选项转为简答
+    }
+  });
+  
+  return {
+    total:questions.length,
+    valid:questions.filter(q=>q.content&&q.content.length>=5).length,
+    issues:issues,
+    summary:`共识别 ${questions.length} 道题目，有效 ${questions.filter(q=>q.content&&q.content.length>=5).length} 道`
+  };
+}
+
+// 显示AI审题结果
+function showPaperAIResult(analysis){
+  document.getElementById('paperAIResult').style.display='block';
+  document.getElementById('paperAISummary').textContent=analysis.summary;
+  
+  let analysisHtml='<div style="margin-bottom:8px;font-weight:500">审题分析：</div>';
+  if(analysis.issues.length===0){
+    analysisHtml+='<div style="color:var(--green)">✓ 未发现明显问题</div>';
+  } else {
+    analysis.issues.forEach(issue=>{
+      analysisHtml+=`<div style="margin:4px 0;color:var(--amber)">⚠ ${issue}</div>`;
+    });
+  }
+  
+  // 添加建议
+  if(analysis.valid<analysis.total){
+    analysisHtml+=`<div style="margin-top:12px;padding:8px;background:white;border-radius:6px;font-size:12px">
+      <div style="color:var(--text2)">💡 建议：部分题目内容不完整，系统将自动识别并补充信息</div>
+    </div>`;
+  }
+  
+  document.getElementById('paperAIAnalysis').innerHTML=analysisHtml;
+}
+
+// 显示预览
+function showPaperPreview(analysis){
+  document.getElementById('paperPreviewPanel').style.display='block';
+  document.getElementById('paperPreviewCount').textContent=paperParsedQuestions.length+' 道题目';
+  
+  const html=paperParsedQuestions.slice(0,20).map((q,i)=>`
+    <div style="background:white;border-radius:8px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">
+        <span style="background:${q.type==='single'?'var(--blue)':q.type==='multi'?'var(--amber)':q.type==='judge'?'var(--green)':'var(--text3)'};color:white;padding:2px 8px;border-radius:4px;font-size:11px;flex-shrink:0">
+          ${q.type==='single'?'单选':q.type==='multi'?'多选':q.type==='judge'?'判断':q.type==='fill'?'填空':'简答'}
+        </span>
+        <span style="color:var(--text3);font-size:12px">第 ${i+1} 题</span>
+      </div>
+      <div style="font-size:13px;line-height:1.6">${escapeHtml(q.content||'')}</div>
+      ${q.options&&q.options.length?`<div style="margin-top:8px;font-size:12px;color:var(--text2)">${q.options.join(' | ')}</div>`:''}
+      ${q.answer?`<div style="margin-top:8px;padding:6px;background:var(--green-light);border-radius:6px;font-size:12px">
+        <span style="color:var(--green)">答案：</span>${escapeHtml(q.answer)}
+      </div>`:''}
+    </div>
+  `).join('');
+  
+  const moreText=paperParsedQuestions.length>20?`<div style="text-align:center;color:var(--text3);padding:12px;font-size:13px">还有 ${paperParsedQuestions.length-20} 道题目...</div>`:'';
+  document.getElementById('paperPreviewContent').innerHTML=html+moreText;
+  
+  // 更新导入按钮文字
+  document.getElementById('btnConfirmPaperText').textContent=`确认导入试卷（${paperParsedQuestions.length}道题）`;
+}
+
+// 更新进度
+function updatePaperImportProgress(text,pct){
+  document.getElementById('paperImportStatusText').textContent=text;
+  document.getElementById('paperImportPct').textContent=Math.round(pct)+'%';
+  document.getElementById('paperImportProgressBar').style.width=Math.round(pct)+'%';
+}
+
+// 确认导入
+function confirmImportPaper(){
+  if(paperParsedQuestions.length===0){
+    showToast('没有可导入的题目','error');
+    return;
+  }
+  
+  // 创建试卷
+  const paperName=paperImportData.fileName.replace(/\.[^.]+$/,'');
+  const questions=DB.questions();
+  const existingIds=new Set(questions.map(q=>q.id));
+  
+  // 添加解析出的题目到题库
+  const newQuestions=paperParsedQuestions.filter(q=>q.content&&q.content.length>=5).map(q=>{
+    let id='q'+Date.now()+Math.random().toString(36).slice(2,6);
+    while(existingIds.has(id)){id='q'+Date.now()+Math.random().toString(36).slice(2,6);}
+    existingIds.add(id);
+    return {
+      id,
+      type:q.type||'single',
+      content:q.content,
+      options:q.options||[],
+      answer:q.answer||'',
+      score:q.type==='essay'?10:q.type==='multi'?4:2,
+      explain:''
+    };
+  });
+  
+  if(newQuestions.length>0){
+    DB.set('questions',[...questions,...newQuestions]);
+    renderQuestions();
+    showToast(`成功导入 ${newQuestions.length} 道题目`,'success');
+  }
+  
+  // 创建试卷
+  const paperId='p'+Date.now();
+  const questionIds=newQuestions.map(q=>q.id);
+  const paper={id:paperId,name:paperName+'（导入）',total:questionIds.length*2,duration:60,pass:60,status:'draft',desc:'从文件 '+paperImportData.fileName+' 导入',questionIds,created:new Date().toLocaleDateString()};
+  const papers=DB.papers();
+  papers.push(paper);
+  DB.set('papers',papers);
+  renderPapers();
+  
+  closeImportPaperModal();
+  showToast(`试卷 "${paper.name}" 已创建，包含 ${questionIds.length} 道题目`,'success');
+}
 
 // ===================== RECORDS =====================
 function renderRecords(){
