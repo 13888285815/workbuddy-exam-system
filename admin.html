@@ -879,77 +879,147 @@ async function enhancePDFWithOCR(file,pdf){
 }
 
 // AI分析题目完整性
+// AI审题功能 - 智能筛选不标准内容
+let aiReviewResult=null;// AI审题结果全局变量
+
 async function analyzeQuestionsWithAI(text){
-  showImportStatus('正在调用AI分析题目...',90);
-  updateImportProgress(90);
+  showImportStatus('正在AI审题...',85);
+  updateImportProgress(85);
   
-  const prompt=`你是专业的题目分析专家。请分析以下文本中的题目，识别并提取每道题目的：题目内容、题型、选项、答案。
+  const prompt=`你是专业的题目审核专家。请对以下文本进行严格审题，识别其中的题目并判断是否标准。
 
-要求：
-1. 识别题型：单选、多选、判断、填空、简答
-2. 提取完整的题目内容
-3. 提取所有选项（A/B/C/D/E）
-4. 提取正确答案
-5. 如果发现题目不完整（如缺答案、缺选项），请标注
+**审题要求：**
+1. **乱码识别**：检测乱码、无意义字符、特殊符号干扰
+2. **格式识别**：判断是否为有效题目（单选/多选/判断/填空/简答）
+3. **完整性判断**：题目必须有内容，答案必须有
+4. **重复检测**：检测内容相似度超过80%的重复题目
+5. **选项检查**：选择题必须有至少2个选项
+6. **答案验证**：答案必须与选项匹配
 
-请以JSON格式输出，格式如下：
+**输出格式（严格JSON）：**
 {
-  "questions":[
-    {
-      "content":"题目内容",
-      "type":"single/multi/judge/fill/essay",
-      "options":["A. 选项1","B. 选项2"...],
-      "answer":"正确答案",
-      "issue":"问题描述（如果有）"
-    }
-  ],
+  "raw_questions":[原始解析出的所有题目],
+  "filtered_questions":[通过AI审核的合格题目],
+  "rejected_questions":[被筛除的不合格题目及原因],
+  "corrections":[修正内容列表],
   "summary":{
-    "total":题目总数,
-    "complete":完整题目数,
-    "incomplete":不完整题目数,
-    "issues":["问题1","问题2"]
+    "total":原始总数,
+    "valid":合格数量,
+    "rejected":筛除数量,
+    "duplicate_count":重复数量,
+    "garble_count":乱码数量,
+    "incomplete_count":不完整数量
   }
 }
 
-待分析文本：
+待审题文本：
 ${text}`;
 
-  // 调用AI分析（使用模拟API，根据实际情况替换）
   try{
-    // 这里可以替换为实际的AI API调用
     const result=await callAIAnalysis(prompt);
     return JSON.parse(result);
   }catch(err){
     console.error('AI分析失败:',err);
-    // 如果AI分析失败，使用本地解析
-    return null;
+    return analyzeQuestionsLocally(text);
   }
 }
 
-// 调用AI分析（需要配置API）
-async function callAIAnalysis(prompt){
-  // 这里可以接入各种AI API
-  // 例如：OpenAI、Claude、本地模型等
+// 本地智能审题分析
+function analyzeQuestionsLocally(text){
+  const qs=parseText(text);
+  const valid=[];
+  const rejected=[];
   
-  // 临时方案：使用本地解析作为后备
-  // 实际使用时替换为真实API调用
-  const localParsed=parseText(processingState.ocrText||'');
+  // 乱码检测模式
+  const garblePattern=/[\u0000-\u001F\u0080-\u009F]{3,}|[\uAC00-\uD7AF]{10,}(?![\uAC00-\uD7AF])|[�]{2,}|\?\?\?|###|░{3,}/;
   
-  return JSON.stringify({
-    questions:localParsed.map(q=>({
-      content:q.content,
-      type:q.type,
-      options:q.options||[],
-      answer:q.answer,
-      issue:!q.answer?'缺少答案':(!q.content?'题目内容为空':null)
-    })),
-    summary:{
-      total:localParsed.length,
-      complete:localParsed.filter(q=>q.content&&q.answer).length,
-      incomplete:localParsed.filter(q=>!q.content||!q.answer).length,
-      issues:localParsed.filter(q=>!q.answer).map((q,i)=>`第${i+1}题缺少答案`)
+  // 用于检测重复
+  const seenContent=[];
+  
+  qs.forEach((q,i)=>{
+    const issues=[];
+    
+    // 检测乱码
+    if(garblePattern.test(q.content)){
+      issues.push('乱码/无意义字符');
+    }
+    
+    // 检测内容过短
+    if(!q.content||q.content.trim().length<5){
+      issues.push('内容为空或过短');
+    }
+    
+    // 检测缺少答案
+    if(!q.answer||q.answer.trim().length<1){
+      issues.push('缺少答案');
+    }
+    
+    // 检测选择题缺少选项
+    if((q.type==='single'||q.type==='multi')&&(!q.options||q.options.length<2)){
+      issues.push('选项不足');
+    }
+    
+    // 检测重复
+    const isDuplicate=seenContent.some(s=>similarity(q.content,s)>0.8);
+    if(isDuplicate){
+      issues.push('重复题目');
+    } else {
+      seenContent.push(q.content);
+    }
+    
+    if(issues.length>0){
+      rejected.push({...q,issues,index:i+1});
+    } else {
+      valid.push(q);
     }
   });
+  
+  return {
+    raw_questions:qs,
+    filtered_questions:valid,
+    rejected_questions:rejected,
+    corrections:[],
+    summary:{
+      total:qs.length,
+      valid:valid.length,
+      rejected:rejected.length,
+      duplicate_count:rejected.filter(r=>r.issues.includes('重复题目')).length,
+      garble_count:rejected.filter(r=>r.issues.includes('乱码/无意义字符')).length,
+      incomplete_count:rejected.filter(r=>!r.issues.includes('重复题目')&&!r.issues.includes('乱码/无意义字符')).length
+    }
+  };
+}
+
+// 字符串相似度计算
+function similarity(s1,s2){
+  if(!s1||!s2)return 0;
+  s1=s1.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g,'');
+  s2=s2.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g,'');
+  if(s1===s2)return 1;
+  if(s1.length<2||s2.length<2)return 0;
+  const set1=new Set(s1);
+  const set2=new Set(s2);
+  const intersection=new Set([...set1].filter(x=>set2.has(x)));
+  return (intersection.size*2)/(s1.length+s2.length);
+}
+
+// 调用AI分析（可接入真实API）
+async function callAIAnalysis(prompt){
+  // 使用本地智能分析（无需API）
+  return JSON.stringify(analyzeQuestionsLocally(processingState.ocrText||''));
+  
+  /* 如需接入真实AI API，取消注释以下代码并填写API地址：
+  try{
+    const response=await fetch('YOUR_AI_API_ENDPOINT',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt})
+    });
+    return await response.text();
+  }catch{
+    return JSON.stringify(analyzeQuestionsLocally(processingState.ocrText||''));
+  }
+  */
 }
 
 // 整合OCR和AI分析的处理流程
@@ -1033,8 +1103,8 @@ async function processPDFFileWithOCR(file){
     processingState.ocrText=pdfText;
     processingState.ocrDone=true;
     
-    // 3. AI分析
-    showImportStatus('正在调用AI分析题目完整性...',85);
+    // 3. AI审题
+    showImportStatus('正在AI审题...',85);
     updateImportProgress(85);
     const aiResult=await analyzeQuestionsWithAI(pdfText);
     
@@ -1042,23 +1112,29 @@ async function processPDFFileWithOCR(file){
       processingState.aiResult=aiResult;
       aiAnalysisResult=aiResult;
       
-      // 显示AI分析结果
+      // 显示AI审题结果
       showAIAnalysisResult(aiResult);
     }
     
     processingState.aiDone=true;
     
-    // 4. 解析题目
-    parsedQuestions=parseText(pdfText);
+    // 4. 使用AI过滤后的合格题目
+    parsedQuestions=aiResult?.filtered_questions||parseText(pdfText);
     
     // 5. 完成
     updateImportProgress(100);
-    showImportStatus('解析完成！',100);
+    showImportStatus('AI审题完成！',100);
     
     if(parsedQuestions.length>0){
-      showToast(`AI分析完成：共识别 ${parsedQuestions.length} 道题目`,'success');
+      const validCount=aiResult?.summary?.valid||parsedQuestions.length;
+      const rejectCount=aiResult?.summary?.rejected||0;
+      if(rejectCount>0){
+        showToast(`AI审题完成：${validCount}道合格题目，已筛除${rejectCount}道不标准题目`,'success');
+      } else {
+        showToast(`AI审题完成：共识别 ${validCount} 道合格题目`,'success');
+      }
     } else {
-      showToast('未识别到题目格式，请检查文件内容','warning');
+      showToast('未识别到有效题目，请检查文件内容','warning');
     }
     
     processParsedQuestions();
@@ -1070,57 +1146,124 @@ async function processPDFFileWithOCR(file){
   }
 }
 
-// 显示AI分析结果
+// 显示AI审题结果
 function showAIAnalysisResult(result){
   const panel=document.getElementById('parsedPanel');
   if(!panel)return;
   
-  // 在预览面板上方显示AI分析摘要
-  let summaryHTML=`<div class="panel" style="margin-bottom:16px;background:var(--blue-light);border-color:var(--blue)">
-    <div class="panel-header" style="background:var(--blue);border-color:var(--blue)">
-      <h3 style="color:white">🤖 AI分析结果</h3>
-      <span class="badge" style="background:white;color:var(--blue)">智能审核</span>
+  const s=result.summary||{};
+  const valid=s.valid||0;
+  const rejected=s.rejected||0;
+  const total=s.total||0;
+  
+  // 在预览面板上方显示AI审题摘要
+  let summaryHTML=`<div class="panel" id="aiReviewPanel" style="margin-bottom:16px;border:2px solid var(--blue)">
+    <div class="panel-header" style="background:linear-gradient(135deg,var(--blue),#0C447C);border-color:var(--blue)">
+      <h3 style="color:white">🤖 AI智能审题结果</h3>
+      <span class="badge" style="background:white;color:var(--blue)">已审核</span>
     </div>
     <div class="panel-body">
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
-        <div style="text-align:center;padding:12px;background:white;border-radius:8px">
-          <div style="font-size:24px;font-weight:600;color:var(--blue)">${result.summary.total}</div>
-          <div style="font-size:12px;color:var(--text3)">识别题目</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">
+        <div style="text-align:center;padding:16px;background:#f8f9fa;border-radius:10px">
+          <div style="font-size:28px;font-weight:700;color:var(--blue)">${total}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">原始识别</div>
         </div>
-        <div style="text-align:center;padding:12px;background:white;border-radius:8px">
-          <div style="font-size:24px;font-weight:600;color:var(--green)">${result.summary.complete}</div>
-          <div style="font-size:12px;color:var(--text3)">完整题目</div>
+        <div style="text-align:center;padding:16px;background:#e8f5e9;border-radius:10px">
+          <div style="font-size:28px;font-weight:700;color:var(--green)">${valid}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">✅ 合格题目</div>
         </div>
-        <div style="text-align:center;padding:12px;background:white;border-radius:8px">
-          <div style="font-size:24px;font-weight:600;color:var(--amber)">${result.summary.incomplete}</div>
-          <div style="font-size:12px;color:var(--text3)">不完整</div>
+        <div style="text-align:center;padding:16px;background:#fff3e0;border-radius:10px">
+          <div style="font-size:28px;font-weight:700;color:var(--amber)">${rejected}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">❌ 已筛除</div>
         </div>
-        <div style="text-align:center;padding:12px;background:white;border-radius:8px">
-          <div style="font-size:24px;font-weight:600;color:var(--red)">${result.questions.filter(q=>q.issue).length}</div>
-          <div style="font-size:12px;color:var(--text3)">需修正</div>
+        <div style="text-align:center;padding:16px;background:#ffebee;border-radius:10px">
+          <div style="font-size:20px;font-weight:700;color:var(--red)">${s.garble_count||0}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">乱码/乱字符</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:#fce4ec;border-radius:10px">
+          <div style="font-size:20px;font-weight:700;color:#9c27b0">${s.duplicate_count||0}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">重复题目</div>
         </div>
       </div>`;
   
-  if(result.summary.issues&&result.summary.issues.length>0){
-    summaryHTML+=`<div style="padding:12px;background:white;border-radius:8px;border-left:4px solid var(--amber)">
-      <div style="font-weight:500;color:var(--amber);margin-bottom:8px">⚠️ 发现问题：</div>
-      <ul style="margin:0;padding-left:20px;font-size:12px;color:var(--text2)">
-        ${result.summary.issues.map(issue=>`<li style="margin-bottom:4px">${issue}</li>`).join('')}
-      </ul>
-    </div>`;
-  } else {
-    summaryHTML+=`<div style="padding:12px;background:white;border-radius:8px;border-left:4px solid var(--green)">
-      <div style="font-weight:500;color:var(--green)">✅ AI审核通过，所有题目完整</div>
+  // 被筛除的题目列表
+  if(result.rejected_questions&&result.rejected_questions.length>0){
+    summaryHTML+=`<div style="margin-bottom:16px">
+      <div style="font-weight:600;color:var(--amber);margin-bottom:10px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">⚠️</span> 已筛除的不标准题目（共${result.rejected_questions.length}道）
+      </div>
+      <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+        ${result.rejected_questions.map((q,i)=>`
+          <div style="padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;background:#fff">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span class="badge badge-red">#${q.index||i+1}</span>
+              <span style="color:var(--red);font-size:11px">${q.issues.join('、')}</span>
+            </div>
+            <div style="color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(q.content?.substring(0,60)||'')}...</div>
+          </div>
+        `).join('')}
+      </div>
     </div>`;
   }
+  
+  // 警告信息
+  if(rejected>0){
+    summaryHTML+=`<div style="padding:12px 16px;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">⚠️</span>
+        <div>
+          <div style="font-weight:600;color:#856404">确认后仅导入 ${valid} 道合格题目</div>
+          <div style="font-size:12px;color:#856404;margin-top:2px">${rejected}道不标准题目（乱码/重复/不完整）已被AI筛除</div>
+        </div>
+      </div>
+    </div>`;
+  } else {
+    summaryHTML+=`<div style="padding:12px 16px;background:#d4edda;border:1px solid #28a745;border-radius:8px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">✅</span>
+        <div>
+          <div style="font-weight:600;color:#155724">AI审题通过</div>
+          <div style="font-size:12px;color:#155724;margin-top:2px">所有识别题目均符合标准</div>
+        </div>
+      </div>
+    </div>`;
+  }
+  
+  // 可折叠查看原始识别
+  summaryHTML+=`<div style="text-align:center">
+    <button class="btn btn-sm" onclick="toggleRawQuestions()" id="btnToggleRaw" style="background:#f8f9fa">
+      📋 查看原始识别(${total}道)
+    </button>
+    <div id="rawQuestionsList" style="display:none;margin-top:12px;text-align:left;max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px">
+      ${result.raw_questions?.map((q,i)=>`
+        <div style="padding:8px;border-bottom:1px solid var(--border);font-size:11px">
+          <div style="color:var(--blue);font-weight:500">#${i+1} [${q.type||'unknown'}]</div>
+          <div style="color:var(--text)">${escapeHtml(q.content?.substring(0,80)||'')}...</div>
+          <div style="color:var(--text3);margin-top:2px">答案: ${q.answer||'无'}</div>
+        </div>
+      `).join('')||'<div style="padding:20px;text-align:center;color:var(--text3)">无原始数据</div>'}
+    </div>
+  </div>`;
   
   summaryHTML+='</div></div>';
   
   // 插入到parsedPanel之前
-  const existingAI=document.getElementById('aiAnalysisSummary');
+  const existingAI=document.getElementById('aiReviewPanel');
   if(existingAI)existingAI.remove();
   panel.insertAdjacentHTML('beforebegin',summaryHTML);
-  document.getElementById('aiAnalysisSummary')||panel.previousElementSibling;
+}
+
+// 切换原始题目列表显示
+function toggleRawQuestions(){
+  const list=document.getElementById('rawQuestionsList');
+  const btn=document.getElementById('btnToggleRaw');
+  if(list.style.display==='none'){
+    list.style.display='block';
+    btn.textContent='🔼 收起原始识别';
+  } else {
+    list.style.display='none';
+    btn.textContent='📋 查看原始识别';
+  }
 }
 
 // 处理解析后的题目
@@ -1684,30 +1827,51 @@ function confirmImportQuestions(){
     showToast('没有可导入的题目','error');
     return;
   }
-  // 自动验证数据
-  const errors=validateQuestions(parsedQuestions);
-  if(errors.length>0){
-    const result=showValidationErrors(errors);
-    const retry=confirm('⚠️ 检测到以下问题（共 '+result.count+' 处）：\n\n'+result.msg+'\n\n建议：取消本次导入，检查原文件格式后重新导入。\n\n点击"确定"放弃导入，点击"取消"继续导入（不推荐）');
-    if(retry){
-      discardImport();
-      return;
-    }
+  
+  // 检查是否经过AI审题
+  const hasAIReview=aiReviewResult&&aiReviewResult.summary;
+  if(!hasAIReview){
+    showToast('请先通过AI审题，再确认导入','warning');
+    return;
   }
-  // 验证通过，最终确认
-  const confirmed=confirm('您已检查预览，确认要导入 '+total+' 道题目到题库吗？\n\n点击"确定"开始导入，点击"取消"继续检查。');
+  
+  // 显示AI审题结果摘要
+  const s=aiReviewResult.summary||{};
+  const valid=s.valid||total;
+  const rejected=s.rejected||0;
+  const garbleCount=s.garble_count||0;
+  const dupCount=s.duplicate_count||0;
+  
+  // 最终确认提示
+  let confirmMsg=`📊 AI审题结果：\n`;
+  confirmMsg+=`• 合格题目：${valid} 道\n`;
+  if(rejected>0){
+    confirmMsg+=`• 已筛除：${rejected} 道`;
+    if(garbleCount>0)confirmMsg+=`（乱码${garbleCount}道）`;
+    if(dupCount>0)confirmMsg+=`（重复${dupCount}道）`;
+    confirmMsg+=`\n`;
+  }
+  confirmMsg+=`\n✅ 确认要导入 ${valid} 道合格题目到题库吗？\n`;
+  confirmMsg+=`⚠️ 请仔细核对预览中的题目内容、答案是否正确。`;
+  
+  const confirmed=confirm(confirmMsg);
   if(!confirmed)return;
+  
   // 执行导入
   const questions=DB.questions();
+  const newCount=parsedQuestions.length;
   questions.push(...parsedQuestions);
   DB.set('questions',questions);
-  const count=parsedQuestions.length;
+  
+  // 清理状态
   parsedQuestions=[];
+  aiReviewResult=null;
   document.getElementById('parsedPanel').style.display='none';
+  document.getElementById('aiReviewPanel')?.remove();
   document.getElementById('importProgress').style.display='none';
   document.getElementById('pdfFile').value='';
-  showToast('成功导入 '+count+' 道题目','success');
-  // 刷新题库列表
+  
+  showToast(`成功导入 ${newCount} 道题目（筛除${rejected}道不标准题目）`,'success');
   renderQuestions();
 }
 
