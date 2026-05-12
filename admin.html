@@ -419,13 +419,16 @@ C. 选项三
           <div style="padding:12px 16px;background:var(--bg);border-radius:8px;margin:0 16px">
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
               <input id="qSearch" type="text" placeholder="搜索题目内容..." style="width:200px;padding:6px 10px;font-size:12px;border-radius:6px" oninput="renderQuestions()">
-              <select id="qFilterType" onchange="renderQuestions()" style="width:120px;padding:6px 10px;font-size:12px;border-radius:6px">
+              <select id="qFilterType" onchange="renderQuestions()" style="width:100px;padding:6px 10px;font-size:12px;border-radius:6px">
                 <option value="">全部类型</option>
                 <option value="single">单选题</option>
                 <option value="multi">多选题</option>
                 <option value="judge">判断题</option>
                 <option value="fill">填空题</option>
                 <option value="essay">简答题</option>
+              </select>
+              <select id="qFilterSubject" onchange="renderQuestions()" style="width:120px;padding:6px 10px;font-size:12px;border-radius:6px">
+                <option value="">全部学科</option>
               </select>
               <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:6px 10px;background:white;border-radius:6px">
                 <input type="checkbox" id="qSelectAll" onchange="toggleSelectAllQuestions()" style="width:16px;height:16px"> 全选
@@ -666,6 +669,24 @@ C. 选项三
     <div class="modal-header"><h3 id="qModalTitle">添加题目</h3><button class="modal-close" onclick="closeModal('addQuestionModal')">×</button></div>
     <div class="modal-body">
       <div class="form-row">
+        <div class="form-group"><label>学科分类</label>
+          <select id="qSubject">
+            <option value="info">💻 信息技术</option>
+            <option value="chinese">📖 语文</option>
+            <option value="math">📐 数学</option>
+            <option value="english">🔤 英语</option>
+            <option value="physics">⚡ 物理</option>
+            <option value="chemistry">🧪 化学</option>
+            <option value="geography">🌍 地理</option>
+            <option value="biology">🧬 生物</option>
+            <option value="history">📜 历史</option>
+            <option value="politics">⚖️ 道德与法制</option>
+            <option value="art">🎨 美术</option>
+            <option value="music">🎵 音乐</option>
+            <option value="pe">⚽ 体育</option>
+            <option value="other">📁 其他</option>
+          </select>
+        </div>
         <div class="form-group"><label>题目类型</label>
           <select id="qType" onchange="renderQTypeFields()">
             <option value="single">单选题</option><option value="multi">多选题</option>
@@ -694,6 +715,35 @@ C. 选项三
     <div class="modal-header"><h3 id="paperModalTitle">创建试卷</h3><button class="modal-close" onclick="closeModal('addPaperModal')">×</button></div>
     <div class="modal-body">
       <div class="form-row full"><div class="form-group"><label>试卷名称</label><input id="pName" type="text" placeholder="请输入试卷名称"></div></div>
+      <div class="form-row">
+        <div class="form-group"><label>学科分类</label>
+          <select id="pSubject">
+            <option value="info">💻 信息技术</option>
+            <option value="chinese">📖 语文</option>
+            <option value="math">📐 数学</option>
+            <option value="english">🔤 英语</option>
+            <option value="physics">⚡ 物理</option>
+            <option value="chemistry">🧪 化学</option>
+            <option value="geography">🌍 地理</option>
+            <option value="biology">🧬 生物</option>
+            <option value="history">📜 历史</option>
+            <option value="politics">⚖️ 道德与法制</option>
+            <option value="art">🎨 美术</option>
+            <option value="music">🎵 音乐</option>
+            <option value="pe">⚽ 体育</option>
+            <option value="other">📁 其他</option>
+          </select>
+        </div>
+        <div class="form-group"><label>考试分类</label>
+          <select id="pExamType">
+            <option value="monthly">月考</option>
+            <option value="midterm">期中考试</option>
+            <option value="simulate">模拟考试</option>
+            <option value="final">期末考试</option>
+            <option value="other">其他</option>
+          </select>
+        </div>
+      </div>
       <div class="form-row">
         <div class="form-group"><label>总分</label><input id="pTotal" type="number" value="100" min="1"></div>
         <div class="form-group"><label>考试时长（分钟）</label><input id="pDuration" type="number" value="60" min="1"></div>
@@ -732,6 +782,55 @@ const DB = {
   records(){return this.get('records')||[]}
 };
 
+// 学科分类
+const SUBJECTS = [
+  {value:'chinese',label:'语文',icon:'📖'},
+  {value:'math',label:'数学',icon:'📐'},
+  {value:'english',label:'英语',icon:'🔤'},
+  {value:'physics',label:'物理',icon:'⚡'},
+  {value:'chemistry',label:'化学',icon:'🧪'},
+  {value:'geography',label:'地理',icon:'🌍'},
+  {value:'biology',label:'生物',icon:'🧬'},
+  {value:'history',label:'历史',icon:'📜'},
+  {value:'politics',label:'道德与法制',icon:'⚖️'},
+  {value:'info',label:'信息技术',icon:'💻'},
+  {value:'art',label:'美术',icon:'🎨'},
+  {value:'music',label:'音乐',icon:'🎵'},
+  {value:'pe',label:'体育',icon:'⚽'},
+  {value:'other',label:'其他',icon:'📁'}
+];
+
+// 考试分类
+const EXAM_TYPES = [
+  {value:'monthly',label:'月考'},
+  {value:'midterm',label:'期中考试'},
+  {value:'simulate',label:'模拟考试'},
+  {value:'final',label:'期末考试'},
+  {value:'other',label:'其他'}
+];
+
+// 获取学科名称
+function getSubjectName(value){
+  const s=SUBJECTS.find(x=>x.value===value);
+  return s?s.label:value;
+}
+
+// 获取考试类型名称
+function getExamTypeName(value){
+  const t=EXAM_TYPES.find(x=>x.value===value);
+  return t?t.label:value;
+}
+
+// 学科下拉选项HTML
+function getSubjectOptions(selected){
+  return SUBJECTS.map(s=>`<option value="${s.value}" ${s.value===selected?'selected':''}>${s.icon} ${s.label}</option>`).join('');
+}
+
+// 考试类型下拉选项HTML
+function getExamTypeOptions(selected){
+  return EXAM_TYPES.map(e=>`<option value="${e.value}" ${e.value===selected?'selected':''}>${e.label}</option>`).join('');
+}
+
 // ===================== INIT =====================
 function initData(){
   if(!DB.get('initialized')){
@@ -749,19 +848,19 @@ function initData(){
 
 function getSampleQuestions(){
   return [
-    {id:'q1',type:'single',content:'计算机中1字节等于多少位？',options:['A.4位','B.8位','C.16位','D.32位'],answer:'B',score:2,explain:'1字节(Byte)=8位(bit)，这是计算机基础知识。'},
-    {id:'q2',type:'single',content:'HTML是什么的缩写？',options:['A.HyperText Markup Language','B.High Text Machine Language','C.HyperText Machine Language','D.High Transfer Markup Language'],answer:'A',score:2,explain:'HTML全称HyperText Markup Language，超文本标记语言。'},
-    {id:'q3',type:'single',content:'以下哪种排序算法平均时间复杂度最低？',options:['A.冒泡排序','B.选择排序','C.快速排序','D.插入排序'],answer:'C',score:2,explain:'快速排序平均时间复杂度为O(nlogn)，是常用排序中最快的。'},
-    {id:'q4',type:'single',content:'TCP/IP协议中，HTTP默认端口号是？',options:['A.21','B.23','C.80','D.443'],answer:'C',score:2,explain:'HTTP默认端口为80，HTTPS为443。'},
-    {id:'q5',type:'single',content:'以下哪个不是关系型数据库？',options:['A.MySQL','B.Oracle','C.MongoDB','D.PostgreSQL'],answer:'C',score:2,explain:'MongoDB是文档型NoSQL数据库，其余三个都是关系型数据库。'},
-    {id:'q6',type:'multi',content:'以下哪些是面向对象编程的基本特征？（多选）',options:['A.封装','B.继承','C.多态','D.递归'],answer:'ABC',score:4,explain:'面向对象三大特征：封装、继承、多态。递归是编程技术，不是OOP特征。'},
-    {id:'q7',type:'multi',content:'以下哪些是HTTP请求方法？（多选）',options:['A.GET','B.POST','C.PUSH','D.DELETE'],answer:'ABD',score:4,explain:'HTTP标准方法包括GET、POST、PUT、DELETE、PATCH等，PUSH不是HTTP方法。'},
-    {id:'q8',type:'judge',content:'Python是一种编译型语言。',answer:'错误',score:2,explain:'Python是解释型语言，代码在运行时逐行解释执行，而不是预先编译成机器码。'},
-    {id:'q9',type:'judge',content:'JavaScript可以在服务器端运行。',answer:'正确',score:2,explain:'Node.js使JavaScript可以在服务器端运行，是现代全栈开发的重要技术。'},
-    {id:'q10',type:'judge',content:'CSS中class选择器使用#号前缀。',answer:'错误',score:2,explain:'CSS中class选择器使用"."前缀，"#"是ID选择器的前缀。'},
-    {id:'q11',type:'fill',content:'在CSS中，用于设置文字颜色的属性是___。',answer:'color',score:3,explain:'CSS的color属性用于设置元素的文字颜色。'},
-    {id:'q12',type:'fill',content:'JavaScript中声明常量使用关键字___。',answer:'const',score:3,explain:'const用于声明不可重新赋值的常量，ES6引入。'},
-    {id:'q13',type:'essay',content:'请简述什么是RESTful API，并说明其主要设计原则。',answer:'RESTful API是一种基于REST架构风格的API设计规范。主要原则：1)无状态性；2)统一接口；3)资源导向，使用URL表示资源；4)使用HTTP方法表示操作（GET查询、POST创建、PUT更新、DELETE删除）；5)可缓存性。',score:10,explain:'RESTful API是现代Web开发的重要概念，面试中经常考察。'}
+    {id:'q1',type:'single',subject:'info',content:'计算机中1字节等于多少位？',options:['A.4位','B.8位','C.16位','D.32位'],answer:'B',score:2,explain:'1字节(Byte)=8位(bit)，这是计算机基础知识。'},
+    {id:'q2',type:'single',subject:'info',content:'HTML是什么的缩写？',options:['A.HyperText Markup Language','B.High Text Machine Language','C.HyperText Machine Language','D.High Transfer Markup Language'],answer:'A',score:2,explain:'HTML全称HyperText Markup Language，超文本标记语言。'},
+    {id:'q3',type:'single',subject:'info',content:'以下哪种排序算法平均时间复杂度最低？',options:['A.冒泡排序','B.选择排序','C.快速排序','D.插入排序'],answer:'C',score:2,explain:'快速排序平均时间复杂度为O(nlogn)，是常用排序中最快的。'},
+    {id:'q4',type:'single',subject:'info',content:'TCP/IP协议中，HTTP默认端口号是？',options:['A.21','B.23','C.80','D.443'],answer:'C',score:2,explain:'HTTP默认端口为80，HTTPS为443。'},
+    {id:'q5',type:'single',subject:'info',content:'以下哪个不是关系型数据库？',options:['A.MySQL','B.Oracle','C.MongoDB','D.PostgreSQL'],answer:'C',score:2,explain:'MongoDB是文档型NoSQL数据库，其余三个都是关系型数据库。'},
+    {id:'q6',type:'multi',subject:'info',content:'以下哪些是面向对象编程的基本特征？（多选）',options:['A.封装','B.继承','C.多态','D.递归'],answer:'ABC',score:4,explain:'面向对象三大特征：封装、继承、多态。递归是编程技术，不是OOP特征。'},
+    {id:'q7',type:'multi',subject:'info',content:'以下哪些是HTTP请求方法？（多选）',options:['A.GET','B.POST','C.PUSH','D.DELETE'],answer:'ABD',score:4,explain:'HTTP标准方法包括GET、POST、PUT、DELETE、PATCH等，PUSH不是HTTP方法。'},
+    {id:'q8',type:'judge',subject:'info',content:'Python是一种编译型语言。',answer:'错误',score:2,explain:'Python是解释型语言，代码在运行时逐行解释执行，而不是预先编译成机器码。'},
+    {id:'q9',type:'judge',subject:'info',content:'JavaScript可以在服务器端运行。',answer:'正确',score:2,explain:'Node.js使JavaScript可以在服务器端运行，是现代全栈开发的重要技术。'},
+    {id:'q10',type:'judge',subject:'info',content:'CSS中class选择器使用#号前缀。',answer:'错误',score:2,explain:'CSS中class选择器使用"."前缀，"#"是ID选择器的前缀。'},
+    {id:'q11',type:'fill',subject:'math',content:'在CSS中，用于设置文字颜色的属性是___。',answer:'color',score:3,explain:'CSS的color属性用于设置元素的文字颜色。'},
+    {id:'q12',type:'fill',subject:'math',content:'JavaScript中声明常量使用关键字___。',answer:'const',score:3,explain:'const用于声明不可重新赋值的常量，ES6引入。'},
+    {id:'q13',type:'essay',subject:'info',content:'请简述什么是RESTful API，并说明其主要设计原则。',answer:'RESTful API是一种基于REST架构风格的API设计规范。主要原则：1)无状态性；2)统一接口；3)资源导向，使用URL表示资源；4)使用HTTP方法表示操作（GET查询、POST创建、PUT更新、DELETE删除）；5)可缓存性。',score:10,explain:'RESTful API是现代Web开发的重要概念，面试中经常考察。'}
   ];
 }
 
@@ -828,11 +927,23 @@ function showPage(name){
   document.querySelectorAll('.nav-item')[idx[name]]?.classList.add('active');
   if(name==='dashboard')renderDashboard();
   if(name==='users')renderUsers();
-  if(name==='questions')renderQuestions();
+  if(name==='questions'){
+    // 初始化学科筛选下拉框
+    initSubjectFilter();
+    renderQuestions();
+  }
   if(name==='papers')renderPapers();
   if(name==='records')renderRecords();
   if(name==='trash')renderTrash();
   if(name==='cleanup')renderCleanup();
+}
+
+// 初始化学科筛选下拉框
+function initSubjectFilter(){
+  const sel=document.getElementById('qFilterSubject');
+  if(sel&&sel.options.length<=1){
+    sel.innerHTML='<option value="">全部学科</option>'+getSubjectOptions('');
+  }
 }
 
 // HTML转义函数
@@ -2026,8 +2137,10 @@ function renderQuestions(){
   let qs=DB.questions();
   document.getElementById('qTotalBadge').textContent='共 '+qs.length+' 道题目';
   const type=document.getElementById('qFilterType').value;
+  const subject=document.getElementById('qFilterSubject').value;
   const search=document.getElementById('qSearch').value.toLowerCase();
   if(type)qs=qs.filter(q=>q.type===type);
+  if(subject)qs=qs.filter(q=>q.subject===subject);
   if(search)qs=qs.filter(q=>q.content.toLowerCase().includes(search));
   const typeLabel={single:'单选',multi:'多选',judge:'判断',fill:'填空',essay:'简答'};
   const badgeClass={single:'badge-blue',multi:'badge-amber',judge:'badge-green',fill:'badge-gray',essay:'badge-red'};
@@ -2036,13 +2149,14 @@ function renderQuestions(){
       <div class="q-meta">
         <input type="checkbox" class="q-cb" data-id="${q.id}" onchange="updateQuestionSelection()" ${selectedQuestionIds.has(q.id)?'checked':''} style="width:18px;height:18px;margin-right:8px;cursor:pointer">
         <span class="q-type">${typeLabel[q.type]||q.type}</span>
+        <span style="background:var(--green-light);color:var(--green);padding:2px 8px;border-radius:4px;font-size:11px">${getSubjectName(q.subject)}</span>
         <span class="q-score">${q.score}分</span>
         <span style="flex:1"></span>
         <button class="btn btn-sm" onclick="editQuestion('${q.id}')">编辑</button>
         <button class="btn btn-danger btn-sm" style="margin-left:6px" onclick="deleteQuestion('${q.id}')">删除</button>
       </div>
       <div class="q-text">${q.content}</div>
-      ${q.options&&q.options.length?`<div class="q-options" style="margin-top:6px">${q.options.map(o=>`<div class="q-option ${q.answer&&q.answer.split('').some(c=>o.startsWith(c))?'correct':''}">${o}</div>`).join('')}</div>`:''}
+      ${q.options&&q.options.length?`<div class="q-options" style="margin-top:6px">${q.options.map(o=>`<div class="q-option ${q.answer&&q.answer.split('').some(c=>o.startsWith(c))?'correct':''}"> ${o}</div>`).join('')}</div>`:''}
       ${q.answer?`<div class="q-answer">答案：${q.answer}</div>`:''}
       ${q.explain?`<div style="font-size:12px;color:var(--text3);margin-top:4px">解析：${q.explain}</div>`:''}
     </div>`).join(''):'<div class="empty">暂无题目，请先通过PDF导入或手动添加</div>';
@@ -2145,7 +2259,8 @@ function openEditQuestion(id){
   window.editingParsedId=id;
   window.editingParsedSource='import';
   document.getElementById('qModalTitle').textContent='编辑题目';
-  document.getElementById('qType').value=q.type;
+  document.getElementById('qType').value=q.type||'single';
+  document.getElementById('qSubject').value=q.subject||'info';
   document.getElementById('qContent').value=q.content||'';
   document.getElementById('qAnswer').value=q.answer||'';
   document.getElementById('qScore').value=q.score||2;
@@ -2154,12 +2269,13 @@ function openEditQuestion(id){
   openModal('addQuestionModal');
 }
 
-function openAddQuestion(){editingQId=null;document.getElementById('qModalTitle').textContent='添加题目';['qContent','qAnswer','qExplain'].forEach(id=>document.getElementById(id).value='');document.getElementById('qScore').value=2;document.getElementById('qType').value='single';renderQTypeFields();openModal('addQuestionModal');}
+function openAddQuestion(){editingQId=null;document.getElementById('qModalTitle').textContent='添加题目';['qContent','qAnswer','qExplain'].forEach(id=>document.getElementById(id).value='');document.getElementById('qScore').value=2;document.getElementById('qType').value='single';document.getElementById('qSubject').value='info';renderQTypeFields();openModal('addQuestionModal');}
 function editQuestion(id){
   const q=DB.questions().find(x=>x.id===id);if(!q)return;
   editingQId=id;
   document.getElementById('qModalTitle').textContent='编辑题目';
   document.getElementById('qType').value=q.type;
+  document.getElementById('qSubject').value=q.subject||'info';
   document.getElementById('qContent').value=q.content;
   document.getElementById('qAnswer').value=q.answer||'';
   document.getElementById('qScore').value=q.score;
@@ -2184,6 +2300,7 @@ function addOption(){
 }
 function saveQuestion(){
   const type=document.getElementById('qType').value;
+  const subject=document.getElementById('qSubject').value;
   const content=document.getElementById('qContent').value.trim();
   const answer=document.getElementById('qAnswer').value.trim();
   const score=parseInt(document.getElementById('qScore').value)||2;
@@ -2196,7 +2313,7 @@ function saveQuestion(){
     inputs.forEach((inp,i)=>{const v=inp.value.trim();if(v)options.push(String.fromCharCode(65+i)+'. '+v);});
     if(options.length<2){showToast('请至少添加2个选项','error');return;}
   }
-  const q={id:editingQId||'q'+Date.now(),type,content,options,answer,score,explain};
+  const q={id:editingQId||'q'+Date.now(),type,subject,content,options,answer,score,explain};
   
   // 如果是编辑导入预览中的题目
   if(window.editingParsedId&&window.editingParsedSource==='import'){
@@ -2226,9 +2343,13 @@ function renderPapers(){
   const statusLabel={draft:'<span class="badge badge-gray">草稿</span>',published:'<span class="badge badge-green">已发布</span>'};
   document.getElementById('paperList').innerHTML=papers.length?papers.map(p=>`
     <div class="exam-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <h4>${p.name}</h4>
-        ${statusLabel[p.status]||''}
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <h4 style="margin:0">${p.name}</h4>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <span style="background:var(--blue-light);color:var(--blue);padding:2px 8px;border-radius:4px;font-size:11px">${getSubjectName(p.subject)}</span>
+          <span style="background:var(--amber-light);color:var(--amber);padding:2px 8px;border-radius:4px;font-size:11px">${getExamTypeName(p.examType)}</span>
+          ${statusLabel[p.status]||''}
+        </div>
       </div>
       <div class="meta">
         <div>总分：${p.total}分 · 时长：${p.duration}分钟 · 及格：${p.pass}分</div>
@@ -2243,12 +2364,14 @@ function renderPapers(){
     </div>`).join(''):'<div class="empty" style="grid-column:1/-1">暂无试卷，点击"创建试卷"开始</div>';
 }
 
-function openAddPaper(){editingPaperId=null;document.getElementById('paperModalTitle').textContent='创建试卷';['pName','pDesc'].forEach(id=>document.getElementById(id).value='');document.getElementById('pTotal').value=100;document.getElementById('pDuration').value=60;document.getElementById('pPass').value=60;document.getElementById('pStatus').value='draft';document.getElementById('pSingle').value=10;document.getElementById('pMulti').value=5;document.getElementById('pJudge').value=5;document.getElementById('pFill').value=3;document.getElementById('pEssay').value=2;}
+function openAddPaper(){editingPaperId=null;document.getElementById('paperModalTitle').textContent='创建试卷';['pName','pDesc'].forEach(id=>document.getElementById(id).value='');document.getElementById('pSubject').value='info';document.getElementById('pExamType').value='monthly';document.getElementById('pTotal').value=100;document.getElementById('pDuration').value=60;document.getElementById('pPass').value=60;document.getElementById('pStatus').value='draft';document.getElementById('pSingle').value=10;document.getElementById('pMulti').value=5;document.getElementById('pJudge').value=5;document.getElementById('pFill').value=3;document.getElementById('pEssay').value=2;}
 function editPaper(id){
   const p=DB.papers().find(x=>x.id===id);if(!p)return;
   editingPaperId=id;
   document.getElementById('paperModalTitle').textContent='编辑试卷';
   document.getElementById('pName').value=p.name;
+  document.getElementById('pSubject').value=p.subject||'info';
+  document.getElementById('pExamType').value=p.examType||'monthly';
   document.getElementById('pTotal').value=p.total;
   document.getElementById('pDuration').value=p.duration;
   document.getElementById('pPass').value=p.pass;
@@ -2259,6 +2382,8 @@ function editPaper(id){
 function savePaper(){
   const name=document.getElementById('pName').value.trim();
   if(!name){showToast('请输入试卷名称','error');return;}
+  const subject=document.getElementById('pSubject').value;
+  const examType=document.getElementById('pExamType').value;
   const total=parseInt(document.getElementById('pTotal').value)||100;
   const duration=parseInt(document.getElementById('pDuration').value)||60;
   const pass=parseInt(document.getElementById('pPass').value)||60;
@@ -2269,13 +2394,13 @@ function savePaper(){
   const allQs=DB.questions();
   let questionIds=[];
   for(const [type,count] of Object.entries(counts)){
-    const pool=allQs.filter(q=>q.type===type);
+    const pool=allQs.filter(q=>q.type===type&&q.subject===subject);
     const shuffled=[...pool].sort(()=>Math.random()-.5);
     questionIds.push(...shuffled.slice(0,count).map(q=>q.id));
   }
-  if(questionIds.length===0){showToast('题库中暂无可用题目，请先导入题目','error');return;}
+  if(questionIds.length===0){showToast('该学科题库中暂无可用题目，请先导入相应学科的题目','error');return;}
   const papers=DB.papers();
-  const p={id:editingPaperId||'p'+Date.now(),name,total,duration,pass,status,desc,questionIds,created:new Date().toLocaleDateString()};
+  const p={id:editingPaperId||'p'+Date.now(),name,subject,examType,total,duration,pass,status,desc,questionIds,created:new Date().toLocaleDateString()};
   if(editingPaperId){const idx=papers.findIndex(x=>x.id===editingPaperId);if(idx>=0)papers[idx]=p;}
   else papers.push(p);
   DB.set('papers',papers);closeModal('addPaperModal');renderPapers();showToast(editingPaperId?'试卷已更新':(`试卷已创建，包含${questionIds.length}道题目`));
