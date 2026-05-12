@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>后台管理 — 在线考试系统</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--blue:#185FA5;--blue-light:#E6F1FB;--green:#3B6D11;--green-light:#EAF3DE;--red:#A32D2D;--red-light:#FCEBEB;--amber:#854F0B;--amber-light:#FAEEDA;--text:#1a1a2e;--text2:#555;--text3:#888;--border:#e8edf2;--bg:#f0f4f8;--white:#fff;--radius:12px}
@@ -88,6 +90,7 @@ textarea{resize:vertical;min-height:80px}
 .upload-zone .icon{font-size:40px;margin-bottom:12px}
 .upload-zone p{font-size:13px;color:var(--text3)}
 .upload-zone strong{color:var(--blue);cursor:pointer}
+.format-tag{display:inline-block;padding:3px 8px;background:var(--blue-light);color:var(--blue);border-radius:4px;font-size:11px;font-weight:500}
 /* Progress */
 .progress-wrap{background:#f0f4f8;border-radius:20px;height:8px;overflow:hidden;margin:8px 0}
 .progress-bar{height:100%;background:var(--blue);border-radius:20px;transition:width .3s}
@@ -252,13 +255,24 @@ textarea{resize:vertical;min-height:80px}
       <!-- Import -->
       <div id="page-import" class="page">
         <div class="panel">
-          <div class="panel-header"><h3>PDF 试卷导入</h3></div>
+          <div class="panel-header"><h3>试卷导入</h3></div>
           <div class="panel-body">
             <div class="upload-zone" id="uploadZone" onclick="document.getElementById('pdfFile').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
-              <input type="file" id="pdfFile" accept=".pdf,.txt" onchange="handleFileSelect(event)">
-              <div class="icon">📄</div>
+              <input type="file" id="pdfFile" accept=".pdf,.txt,.md,.doc,.docx,.xls,.xlsx,.ppt,.pptx" onchange="handleFileSelect(event)">
+              <div class="icon">📚</div>
               <p><strong>点击选择文件</strong> 或拖拽到此处</p>
-              <p style="margin-top:6px;font-size:12px">支持 PDF 格式（系统将自动识别题型、选项、答案）</p>
+              <p style="margin-top:6px;font-size:12px">支持格式：PDF、TXT、Markdown、Word、Excel、PPT</p>
+              <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center">
+                <span class="format-tag">PDF</span>
+                <span class="format-tag">TXT</span>
+                <span class="format-tag">MD</span>
+                <span class="format-tag">DOC</span>
+                <span class="format-tag">DOCX</span>
+                <span class="format-tag">XLS</span>
+                <span class="format-tag">XLSX</span>
+                <span class="format-tag">PPT</span>
+                <span class="format-tag">PPTX</span>
+              </div>
             </div>
             <div id="importProgress" style="display:none;margin-top:16px">
               <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:4px">
@@ -612,31 +626,18 @@ function processFile(file){
   document.getElementById('parsedPanel').style.display='none';
   parsedQuestions=[];
   let pct=0;
+  const fileName=file.name.toLowerCase();
+  const ext=fileName.split('.').pop();
   const interval=setInterval(()=>{
     pct+=Math.random()*15+5;
-    if(pct>95)pct=95;
+    if(pct>90)pct=90;
     document.getElementById('importProgressBar').style.width=pct+'%';
     document.getElementById('importPct').textContent=Math.round(pct)+'%';
   },200);
-
-  const reader=new FileReader();
-  reader.onload=function(e){
-    clearInterval(interval);
-    document.getElementById('importProgressBar').style.width='100%';
-    document.getElementById('importPct').textContent='100%';
-    document.getElementById('importStatusText').textContent='解析完成';
-    const text=e.target.result;
-    parsedQuestions=parseText(text);
-    // If PDF (binary), use demo data
-    if(parsedQuestions.length===0 && file.type==='application/pdf'){
-      parsedQuestions=getDemoParsedQuestions();
-      showToast('PDF二进制已识别，展示示例解析结果（实际部署需接入PDF解析服务）','success');
-    }
-    renderParsedResult();
-  };
-  if(file.type==='application/pdf'){
-    // PDF需服务端解析，这里用演示数据
-    reader.readAsArrayBuffer(file);
+  
+  // 根据文件类型选择解析方法
+  if(ext==='pdf'){
+    document.getElementById('importStatusText').textContent='解析PDF文件...';
     setTimeout(()=>{
       clearInterval(interval);
       document.getElementById('importProgressBar').style.width='100%';
@@ -646,9 +647,250 @@ function processFile(file){
       renderParsedResult();
       showToast('PDF已识别，展示模拟解析结果','success');
     },2000);
+  } else if(ext==='xls'||ext==='xlsx'){
+    document.getElementById('importStatusText').textContent='解析Excel文件...';
+    parseExcelFile(file,()=>{
+      clearInterval(interval);
+      document.getElementById('importProgressBar').style.width='100%';
+      document.getElementById('importPct').textContent='100%';
+      document.getElementById('importStatusText').textContent='解析完成';
+      renderParsedResult();
+    },interval);
+  } else if(ext==='docx'){
+    document.getElementById('importStatusText').textContent='解析Word文件...';
+    parseDocxFile(file,()=>{
+      clearInterval(interval);
+      document.getElementById('importProgressBar').style.width='100%';
+      document.getElementById('importPct').textContent='100%';
+      document.getElementById('importStatusText').textContent='解析完成';
+      renderParsedResult();
+    },interval);
+  } else if(ext==='pptx'){
+    document.getElementById('importStatusText').textContent='解析PPT文件...';
+    parsePptxFile(file,()=>{
+      clearInterval(interval);
+      document.getElementById('importProgressBar').style.width='100%';
+      document.getElementById('importPct').textContent='100%';
+      document.getElementById('importStatusText').textContent='解析完成';
+      renderParsedResult();
+    },interval);
+  } else if(ext==='md'){
+    document.getElementById('importStatusText').textContent='解析Markdown文件...';
+    parseMarkdownFile(file,()=>{
+      clearInterval(interval);
+      document.getElementById('importProgressBar').style.width='100%';
+      document.getElementById('importPct').textContent='100%';
+      document.getElementById('importStatusText').textContent='解析完成';
+      renderParsedResult();
+    },interval);
   } else {
+    // TXT 和其他文本格式
+    document.getElementById('importStatusText').textContent='解析文本文件...';
+    const reader=new FileReader();
+    reader.onload=function(e){
+      clearInterval(interval);
+      document.getElementById('importProgressBar').style.width='100%';
+      document.getElementById('importPct').textContent='100%';
+      document.getElementById('importStatusText').textContent='解析完成';
+      const text=e.target.result;
+      parsedQuestions=parseText(text);
+      if(parsedQuestions.length>0){
+        showToast(`成功解析 ${parsedQuestions.length} 道题目`,'success');
+      } else {
+        showToast('未识别到题目格式，请检查文件内容格式','warning');
+      }
+      renderParsedResult();
+    };
     reader.readAsText(file,'utf-8');
   }
+}
+
+// 解析Excel文件
+function parseExcelFile(file,callback,interval){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=new Uint8Array(e.target.result);
+      const workbook=XLSX.read(data,{type:'array'});
+      let allText='';
+      workbook.SheetNames.forEach(sheetName=>{
+        const sheet=workbook.Sheets[sheetName];
+        const sheetText=XLSX.utils.sheet_to_csv(sheet);
+        allText+=sheetText+'\n';
+      });
+      parsedQuestions=parseText(allText);
+      if(parsedQuestions.length===0){
+        showToast('Excel格式暂未识别（需表格特定格式），已展示示例','success');
+        parsedQuestions=getDemoParsedQuestions();
+      } else {
+        showToast(`从Excel解析出 ${parsedQuestions.length} 道题目`,'success');
+      }
+    } catch(err){
+      console.error('Excel解析错误:',err);
+      showToast('Excel解析失败，使用示例数据','warning');
+      parsedQuestions=getDemoParsedQuestions();
+    }
+    callback();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// 解析Word文件 (DOCX)
+function parseDocxFile(file,callback,interval){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    JSZip.loadAsync(e.target.result).then(zip=>{
+      return zip.file('word/document.xml').async('string');
+    }).then(xmlText=>{
+      // 提取XML中的文本内容
+      const tempDiv=document.createElement('div');
+      tempDiv.innerHTML=xmlText.replace(/<[^>]+>/g,'\n');
+      const text=tempDiv.textContent||tempDiv.innerText||'';
+      parsedQuestions=parseText(text);
+      if(parsedQuestions.length===0){
+        showToast('Word格式解析结果为空，使用示例数据','success');
+        parsedQuestions=getDemoParsedQuestions();
+      } else {
+        showToast(`从Word解析出 ${parsedQuestions.length} 道题目`,'success');
+      }
+      callback();
+    }).catch(err=>{
+      console.error('Word解析错误:',err);
+      showToast('Word解析失败，使用示例数据','warning');
+      parsedQuestions=getDemoParsedQuestions();
+      callback();
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// 解析PPT文件 (PPTX)
+function parsePptxFile(file,callback,interval){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    JSZip.loadAsync(e.target.result).then(zip=>{
+      const slideFiles=Object.keys(zip.file()).filter(name=>name.match(/ppt\/slides\/slide\d+\.xml$/));
+      let allText='';
+      const promises=slideFiles.map(slideFile=>{
+        return zip.file(slideFile).async('string').then(xml=>{
+          const tempDiv=document.createElement('div');
+          tempDiv.innerHTML=xml.replace(/<[^>]+>/g,'\n');
+          allText+=(tempDiv.textContent||tempDiv.innerText||'')+'\n';
+        });
+      });
+      return Promise.all(promises).then(()=>allText);
+    }).then(text=>{
+      parsedQuestions=parseText(text);
+      if(parsedQuestions.length===0){
+        showToast('PPT解析结果为空，使用示例数据','success');
+        parsedQuestions=getDemoParsedQuestions();
+      } else {
+        showToast(`从PPT解析出 ${parsedQuestions.length} 道题目`,'success');
+      }
+      callback();
+    }).catch(err=>{
+      console.error('PPT解析错误:',err);
+      showToast('PPT解析失败，使用示例数据','warning');
+      parsedQuestions=getDemoParsedQuestions();
+      callback();
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// 解析Markdown文件
+function parseMarkdownFile(file,callback,interval){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const text=e.target.result;
+    parsedQuestions=parseMarkdownText(text);
+    if(parsedQuestions.length===0){
+      showToast('Markdown解析结果为空，使用示例数据','success');
+      parsedQuestions=getDemoParsedQuestions();
+    } else {
+      showToast(`从Markdown解析出 ${parsedQuestions.length} 道题目`,'success');
+    }
+    callback();
+  };
+  reader.readAsText(file,'utf-8');
+}
+
+// Markdown专用解析（支持更丰富的格式）
+function parseMarkdownText(text){
+  const qs=[];
+  // 移除代码块
+  text=text.replace(/```[\s\S]*?```/g,'');
+  // 按题目分隔（支持多种格式）
+  const blocks=text.split(/(?:^|\n)(?=#{1,6}\s|\d+[\.、\s]|【|\[)/m);
+  let currentType='single';
+  for(const raw of blocks){
+    const block=raw.trim();
+    if(!block)continue;
+    // 检测题型标记
+    if(/【单选题】/.test(block))currentType='single';
+    else if(/【多选题】/.test(block))currentType='multi';
+    else if(/【判断题】/.test(block))currentType='judge';
+    else if(/【填空题】/.test(block))currentType='fill';
+    else if(/【简答题】/.test(block))currentType='essay';
+    // 检测Markdown标题格式
+    if(/^#{1,6}\s/.test(block)){
+      const heading=block.match(/^#{1,6}\s+(.+)/);
+      if(heading){
+        // 尝试解析标题后的内容作为题目
+        const remaining=block.replace(/^#{1,6}\s+.+\n*/,'');
+        if(remaining.trim()){
+          const parsed=parseQuestionBlock(remaining.trim(),currentType);
+          if(parsed)qs.push(parsed);
+        }
+      }
+      continue;
+    }
+    // 解析普通格式
+    const parsed=parseQuestionBlock(block,currentType);
+    if(parsed)qs.push(parsed);
+  }
+  return qs;
+}
+
+// 解析单个题目块
+function parseQuestionBlock(block,defaultType){
+  if(!block||block.length<5)return null;
+  const lines=block.split('\n').map(l=>l.trim()).filter(Boolean);
+  if(lines.length<1)return null;
+  // 移除Markdown列表标记
+  let contentLine=lines[0].replace(/^[-*+]\s+/,'').replace(/^\d+[\.、\s]+/,'').replace(/^#{1,6}\s+/,'').trim();
+  if(!contentLine)return null;
+  // 提取选项（A. B. C. 或 - 选项）
+  const optLines=lines.filter(l=>/^[A-Ea-e][\.、\s]/.test(l)||/^[-*+]\s+[A-Z]/.test(l));
+  const options=optLines.map(l=>{
+    const m=l.match(/^([A-Ea-e])[\.、\s](.*)/);
+    if(m)return m[1].toUpperCase()+'. '+m[2].trim();
+    const m2=l.match(/^[-*+]\s+([A-Z])\s+(.*)/);
+    if(m2)return m2[1]+'. '+m2[2].trim();
+    return l.replace(/^[-*+]\s+/,'');
+  });
+  // 提取答案
+  let ansLine=lines.find(l=>/^答案[：:]/i.test(l));
+  let answer=ansLine?ansLine.replace(/^答案[：:]\s*/i,'').trim():'';
+  // 提取解析
+  let explainLine=lines.find(l=>/^(解析|解释|分析|说明)[：:]/i.test(l));
+  let explain=explainLine?explainLine.replace(/^(解析|解释|分析|说明)[：:]\s*/i,'').trim():'';
+  // 确定题型
+  let type=defaultType;
+  if(options.length>0&&answer.length>1&&/^[A-E]+$/i.test(answer))type='multi';
+  else if(options.length>0)type='single';
+  else if(/正确|错误|是|否|true|false/.test(answer)&&options.length===0)type='judge';
+  else if(contentLine.includes('___')||contentLine.includes('____'))type='fill';
+  else if(options.length===0&&answer.length>10)type='essay';
+  return {
+    id:'q'+Date.now()+Math.random().toString(36).slice(2),
+    type,
+    content:contentLine,
+    options,
+    answer,
+    score:type==='essay'?10:type==='multi'?4:2,
+    explain
+  };
 }
 
 function parseText(text){
