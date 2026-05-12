@@ -421,7 +421,7 @@ C. 选项三
               <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:6px 10px;background:white;border-radius:6px">
                 <input type="checkbox" id="qSelectAll" onchange="toggleSelectAllQuestions()" style="width:16px;height:16px"> 全选
               </label>
-              <button class="btn btn-sm btn-danger" onclick="batchDeleteQuestions()" id="btnBatchDelete" style="display:none">批量删除 (0)</button>
+              <button class="btn btn-sm btn-warning" onclick="batchDeleteQuestions()" id="btnBatchDelete" style="display:none">移到回收站 (0)</button>
               <button class="btn btn-sm" onclick="openAddQuestion()">+ 添加题目</button>
               <button class="btn btn-sm btn-outline" onclick="showPwdConfirm('clearAllQuestions',null,'确认清空全部题库？此操作不可恢复！')">清空题库</button>
             </div>
@@ -1400,7 +1400,7 @@ function updateQuestionSelection(){
   if(btn){
     if(count>0){
       btn.style.display='inline-block';
-      btn.textContent='批量删除 ('+count+')';
+      btn.textContent='移到回收站 ('+count+')';
     } else {
       btn.style.display='none';
     }
@@ -1414,20 +1414,52 @@ function toggleSelectAllQuestions(){
   updateQuestionSelection();
 }
 
-// 批量删除题目
+// 批量删除题目（移到回收站）
 function batchDeleteQuestions(){
   const count=selectedQuestionIds.size;
   if(count===0){
     showToast('请先选择要删除的题目','error');
     return;
   }
-  if(!confirm('确定要删除选中的 '+count+' 道题目吗？此操作不可恢复！'))return;
+  if(!confirm('确定要将选中的 '+count+' 道题目移到回收站吗？可在回收站恢复。'))return;
   const ids=Array.from(selectedQuestionIds);
-  const questions=DB.questions().filter(q=>!ids.includes(q.id));
-  DB.set('questions',questions);
+  const toTrash=DB.questions().filter(q=>ids.includes(q.id));
+  const remaining=DB.questions().filter(q=>!ids.includes(q.id));
+  DB.set('questions',remaining);
+  // 移到回收站
+  const trash=getTrash();
+  const existing=trash.find(t=>t.type==='questions_batch');
+  if(existing){
+    existing.items.push(...toTrash);
+    existing.time=Date.now();
+  } else {
+    trash.push({type:'questions_batch',items:toTrash,time:Date.now()});
+  }
+  saveTrash(trash);
   selectedQuestionIds=new Set();
   renderQuestions();
-  showToast('已删除 '+count+' 道题目','success');
+  showToast('已移到回收站 '+count+' 道题目','success');
+}
+
+// 单个删除题目（移到回收站）
+function deleteQuestion(id){
+  if(!confirm('确定要将此题目移到回收站吗？可在回收站恢复。'))return;
+  const q=DB.questions().find(x=>x.id===id);
+  if(!q)return;
+  const remaining=DB.questions().filter(x=>x.id!==id);
+  DB.set('questions',remaining);
+  // 移到回收站
+  const trash=getTrash();
+  const existing=trash.find(t=>t.type==='questions_batch');
+  if(existing){
+    existing.items.push(q);
+    existing.time=Date.now();
+  } else {
+    trash.push({type:'questions_batch',items:[q],time:Date.now()});
+  }
+  saveTrash(trash);
+  renderQuestions();
+  showToast('已移到回收站，可在回收站恢复','success');
 }
 
 function openAddQuestion(){editingQId=null;document.getElementById('qModalTitle').textContent='添加题目';['qContent','qAnswer','qExplain'].forEach(id=>document.getElementById(id).value='');document.getElementById('qScore').value=2;document.getElementById('qType').value='single';renderQTypeFields();openModal('addQuestionModal');}
@@ -1629,10 +1661,19 @@ function confirmPwdAction(){
   }
 }
 
-// 清空全部题库
+// 清空全部题库（移到回收站）
 function clearAllQuestions(){
+  const questions=DB.questions();
+  if(questions.length===0){
+    showToast('题库已经是空的','warning');
+    return;
+  }
+  // 移到回收站
+  const trash=getTrash();
+  trash.push({type:'questions_batch',items:questions,time:Date.now()});
+  saveTrash(trash);
   DB.set('questions',[]);
-  showToast('题库已清空，可重新导入', 'success');
+  showToast('题库已移到回收站，可在回收站恢复', 'success');
   renderQuestions();
 }
 
@@ -1723,7 +1764,7 @@ function renderTrash(){
 }
 
 function getTypeName(type){
-  const names={questions:'题库',papers:'试卷',records:'评分记录',wrongs:'错题库',timers:'计时数据'};
+  const names={questions:'题库',questions_batch:'题目',papers:'试卷',records:'考试记录',wrongs:'错题库',endless:'无尽模式记录'};
   return names[type]||type;
 }
 
@@ -1738,20 +1779,45 @@ function restoreFromTrash(index){
     case 'questions':
       DB.set('questions',item.items);
       break;
+    case 'questions_batch':
+      // 批量题目合并恢复
+      const existing=DB.questions();
+      const newItems=item.items.filter(q=>!existing.some(eq=>eq.id===q.id));
+      DB.set('questions',[...existing,...newItems]);
+      break;
     case 'papers':
-      DB.set('papers',item.items);
+      // 试卷合并恢复
+      const existingPapers=DB.papers();
+      const newPapers=item.items.filter(p=>!existingPapers.some(ep=>ep.id===p.id));
+      DB.set('papers',[...existingPapers,...newPapers]);
       break;
     case 'records':
-      DB.set('records',item.items);
+      // 记录合并恢复
+      const existingRecords=DB.records();
+      const newRecords=item.items.filter(r=>!existingRecords.some(er=>er.id===r.id));
+      DB.set('records',[...existingRecords,...newRecords]);
       break;
     case 'wrongs':
-      localStorage.setItem('exam_wrongs',JSON.stringify(item.items));
+      // 错题库合并恢复
+      const existingWrongs=JSON.parse(localStorage.getItem('exam_wrongs')||'[]');
+      const newWrongs=item.items.filter(w=>!existingWrongs.some(ew=>ew.id===w.id));
+      localStorage.setItem('exam_wrongs',JSON.stringify([...existingWrongs,...newWrongs]));
+      break;
+    case 'endless':
+      // 无尽模式记录恢复
+      const existingEndless=JSON.parse(localStorage.getItem('exam_endless_records')||'[]');
+      const newEndless=item.items.filter(r=>!existingEndless.some(er=>er.id===r.id));
+      localStorage.setItem('exam_endless_records',JSON.stringify([...existingEndless,...newEndless]));
       break;
   }
   trash.splice(index,1);
   saveTrash(trash);
-  showToast('数据已恢复','success');
+  showToast('数据已恢复（重复项已跳过）','success');
   renderTrash();
+  // 刷新相关页面
+  if(item.type==='questions'||item.type==='questions_batch')renderQuestions();
+  if(item.type==='papers')renderPapers();
+  if(item.type==='records')renderRecords();
 }
 
 function deletePermanent(index){
