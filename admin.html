@@ -232,6 +232,10 @@ textarea{resize:vertical;min-height:80px}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
         <span>数据清理</span>
       </div>
+      <div class="nav-item" onclick="showPage('categories')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/><path d="M8 10h8"/><path d="M8 14h6"/></svg>
+        <span>分类管理</span>
+      </div>
     </div>
     <div class="sidebar-footer">
       <span id="sidebarUser">admin</span> · <a href="#" onclick="doLogout()" style="color:#aaa">退出</a>
@@ -501,6 +505,38 @@ C. 选项三
         </div>
       </div>
 
+      <!-- Categories -->
+      <div id="page-categories" class="page">
+        <div class="panel">
+          <div class="panel-header">
+            <h3>分类管理</h3>
+          </div>
+          <div class="panel-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+              <!-- Subject Categories -->
+              <div style="background:var(--bg);border-radius:12px;padding:20px">
+                <h4 style="margin-bottom:16px;font-size:15px;font-weight:500;color:var(--text)">学科分类</h4>
+                <div style="display:flex;gap:8px;margin-bottom:16px">
+                  <input type="text" id="newSubjectInput" placeholder="新增学科（如：语文）" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                  <button class="btn btn-primary btn-sm" onclick="addSubjectCategory()">添加</button>
+                </div>
+                <div id="subjectCategoriesList" style="display:flex;flex-direction:column;gap:8px"></div>
+              </div>
+              
+              <!-- Exam Categories -->
+              <div style="background:var(--bg);border-radius:12px;padding:20px">
+                <h4 style="margin-bottom:16px;font-size:15px;font-weight:500;color:var(--text)">考试分类</h4>
+                <div style="display:flex;gap:8px;margin-bottom:16px">
+                  <input type="text" id="newExamTypeInput" placeholder="新增考试类型（如：月考）" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                  <button class="btn btn-primary btn-sm" onclick="addExamCategory()">添加</button>
+                </div>
+                <div id="examCategoriesList" style="display:flex;flex-direction:column;gap:8px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <!-- Cleanup -->
       <div id="page-cleanup" class="page">
         <div class="panel">
@@ -671,20 +707,7 @@ C. 选项三
       <div class="form-row">
         <div class="form-group"><label>学科分类</label>
           <select id="qSubject">
-            <option value="info">💻 信息技术</option>
-            <option value="chinese">📖 语文</option>
-            <option value="math">📐 数学</option>
-            <option value="english">🔤 英语</option>
-            <option value="physics">⚡ 物理</option>
-            <option value="chemistry">🧪 化学</option>
-            <option value="geography">🌍 地理</option>
-            <option value="biology">🧬 生物</option>
-            <option value="history">📜 历史</option>
-            <option value="politics">⚖️ 道德与法制</option>
-            <option value="art">🎨 美术</option>
-            <option value="music">🎵 音乐</option>
-            <option value="pe">⚽ 体育</option>
-            <option value="other">📁 其他</option>
+            <!-- 选项将通过JavaScript动态加载 -->
           </select>
         </div>
         <div class="form-group"><label>题目类型</label>
@@ -718,29 +741,12 @@ C. 选项三
       <div class="form-row">
         <div class="form-group"><label>学科分类</label>
           <select id="pSubject">
-            <option value="info">💻 信息技术</option>
-            <option value="chinese">📖 语文</option>
-            <option value="math">📐 数学</option>
-            <option value="english">🔤 英语</option>
-            <option value="physics">⚡ 物理</option>
-            <option value="chemistry">🧪 化学</option>
-            <option value="geography">🌍 地理</option>
-            <option value="biology">🧬 生物</option>
-            <option value="history">📜 历史</option>
-            <option value="politics">⚖️ 道德与法制</option>
-            <option value="art">🎨 美术</option>
-            <option value="music">🎵 音乐</option>
-            <option value="pe">⚽ 体育</option>
-            <option value="other">📁 其他</option>
+            <!-- 选项将通过JavaScript动态加载 -->
           </select>
         </div>
         <div class="form-group"><label>考试分类</label>
           <select id="pExamType">
-            <option value="monthly">月考</option>
-            <option value="midterm">期中考试</option>
-            <option value="simulate">模拟考试</option>
-            <option value="final">期末考试</option>
-            <option value="other">其他</option>
+            <!-- 选项将通过JavaScript动态加载 -->
           </select>
         </div>
       </div>
@@ -2268,7 +2274,7 @@ function openEditQuestion(id){
   openModal('addQuestionModal');
 }
 
-function openAddQuestion(){editingQId=null;document.getElementById('qModalTitle').textContent='添加题目';['qContent','qAnswer','qExplain'].forEach(id=>document.getElementById(id).value='');document.getElementById('qScore').value=2;document.getElementById('qType').value='single';document.getElementById('qSubject').value='info';renderQTypeFields();openModal('addQuestionModal');}
+function openAddQuestion(){editingQId=null;document.getElementById('qModalTitle').textContent='添加题目';['qContent','qAnswer','qExplain'].forEach(id=>document.getElementById(id).value='');document.getElementById('qScore').value=2;document.getElementById('qType').value='single';updateCategoryDropdowns();const subjectCategories=JSON.parse(localStorage.getItem('subjectCategories')||'[]');document.getElementById('qSubject').value=subjectCategories[0]||'';renderQTypeFields();openModal('addQuestionModal');}
 function editQuestion(id){
   const q=DB.questions().find(x=>x.id===id);if(!q)return;
   editingQId=id;
@@ -3156,6 +3162,277 @@ function renderWrongAnalysis(){
 // ===================== PAPER MODAL OPEN =====================
 const paperBtn = document.querySelector('[onclick="openModal(\'addPaperModal\')"]');
 if(paperBtn) paperBtn.setAttribute('onclick','openAddPaper();openModal("addPaperModal")');
+
+// ===================== CATEGORIES MANAGEMENT =====================
+function initCategories() {
+  // Initialize subject categories if not exist in localStorage
+  if (!localStorage.getItem('subjectCategories')) {
+    // Use default values from SUBJECTS array
+    const defaultSubjects = SUBJECTS.map(s => s.label);
+    localStorage.setItem('subjectCategories', JSON.stringify(defaultSubjects));
+  } else {
+    // Load from localStorage and add any new subjects to SUBJECTS array
+    const storedSubjects = JSON.parse(localStorage.getItem('subjectCategories')) || [];
+    
+    storedSubjects.forEach(label => {
+      const exists = SUBJECTS.find(s => s.label === label);
+      if (!exists) {
+        // Generate a value for the new subject
+        let value = label.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!value) {
+          // If value is empty (e.g., for Chinese characters), use a counter
+          value = 'subject_' + (SUBJECTS.length + 1);
+        }
+        
+        // Use a default icon
+        const icons = ['📖', '📐', '🔤', '⚡', '🧪', '🌍', '🧬', '📜', '⚖️', '💻', '🎨', '🎵', '⚽', '📁'];
+        const icon = icons[SUBJECTS.length % icons.length];
+        
+        SUBJECTS.push({value, label, icon});
+      }
+    });
+  }
+  
+  // Initialize exam categories if not exist in localStorage
+  if (!localStorage.getItem('examCategories')) {
+    // Use default values from EXAM_TYPES array
+    const defaultExamTypes = EXAM_TYPES.map(e => e.label);
+    localStorage.setItem('examCategories', JSON.stringify(defaultExamTypes));
+  } else {
+    // Load from localStorage and add any new exam types to EXAM_TYPES array
+    const storedExamTypes = JSON.parse(localStorage.getItem('examCategories')) || [];
+    
+    storedExamTypes.forEach(label => {
+      const exists = EXAM_TYPES.find(e => e.label === label);
+      if (!exists) {
+        // Generate a value for the new exam type
+        let value = label.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!value) {
+          // If value is empty (e.g., for Chinese characters), use a counter
+          value = 'exam_' + (EXAM_TYPES.length + 1);
+        }
+        
+        EXAM_TYPES.push({value, label});
+      }
+    });
+  }
+}
+
+function loadCategories() {
+  // Load subject categories from SUBJECTS array
+  const subjectList = document.getElementById('subjectCategoriesList');
+  if (subjectList) {
+    subjectList.innerHTML = '';
+    SUBJECTS.forEach((s, index) => {
+      const item = document.createElement('div');
+      item.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:white;border-radius:8px;border:1px solid var(--border);';
+      item.innerHTML = `
+        <span style="font-size:13px;color:var(--text)">${s.icon} ${s.label}</span>
+        <button class="btn btn-danger btn-sm" onclick="deleteSubjectCategory(${index})" style="padding:4px 8px;font-size:11px">删除</button>
+      `;
+      subjectList.appendChild(item);
+    });
+  }
+  
+  // Load exam categories from EXAM_TYPES array
+  const examList = document.getElementById('examCategoriesList');
+  if (examList) {
+    examList.innerHTML = '';
+    EXAM_TYPES.forEach((e, index) => {
+      const item = document.createElement('div');
+      item.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:white;border-radius:8px;border:1px solid var(--border);';
+      item.innerHTML = `
+        <span style="font-size:13px;color:var(--text)">${e.label}</span>
+        <button class="btn btn-danger btn-sm" onclick="deleteExamCategory(${index})" style="padding:4px 8px;font-size:11px">删除</button>
+      `;
+      examList.appendChild(item);
+    });
+  }
+  
+  // Also update the dropdowns in other pages
+  updateCategoryDropdowns();
+}
+
+function updateCategoryDropdowns() {
+  // Update subject filter dropdown in questions page
+  const subjectFilter = document.getElementById('qFilterSubject');
+  if (subjectFilter) {
+    // Use SUBJECTS array
+    subjectFilter.innerHTML = '<option value="">全部学科</option>';
+    SUBJECTS.forEach(s => {
+      const option = document.createElement('option');
+      option.value = s.value;
+      option.textContent = s.icon + ' ' + s.label;
+      subjectFilter.appendChild(option);
+    });
+  }
+  
+  // Update subject dropdown in add question modal
+  const qSubject = document.getElementById('qSubject');
+  if (qSubject) {
+    qSubject.innerHTML = '';
+    SUBJECTS.forEach(s => {
+      const option = document.createElement('option');
+      option.value = s.value;
+      option.textContent = s.icon + ' ' + s.label;
+      qSubject.appendChild(option);
+    });
+  }
+  
+  // Update subject dropdown in add paper modal
+  const pSubject = document.getElementById('pSubject');
+  if (pSubject) {
+    pSubject.innerHTML = '';
+    SUBJECTS.forEach(s => {
+      const option = document.createElement('option');
+      option.value = s.value;
+      option.textContent = s.icon + ' ' + s.label;
+      pSubject.appendChild(option);
+    });
+  }
+  
+  // Update exam type dropdown in add paper modal
+  const pExamType = document.getElementById('pExamType');
+  if (pExamType) {
+    pExamType.innerHTML = '';
+    EXAM_TYPES.forEach(e => {
+      const option = document.createElement('option');
+      option.value = e.value;
+      option.textContent = e.label;
+      pExamType.appendChild(option);
+    });
+  }
+}
+
+function addSubjectCategory() {
+  const input = document.getElementById('newSubjectInput');
+  const newCategory = input.value.trim();
+  
+  if (!newCategory) {
+    showToast('请输入学科名称', 'error');
+    return;
+  }
+  
+  // Check if category already exists in SUBJECTS array
+  if (SUBJECTS.find(s => s.label === newCategory)) {
+    showToast('该学科已存在', 'error');
+    return;
+  }
+  
+  // Add to SUBJECTS array with a generated value
+  // For Chinese labels, we need to generate an English value
+  // For simplicity, use pinyin-like conversion or a counter
+  let value = newCategory.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!value) {
+    // If value is empty (e.g., for Chinese characters), use a counter
+    value = 'subject_' + (SUBJECTS.length + 1);
+  }
+  
+  // Use a default icon
+  const icons = ['📖', '📐', '🔤', '⚡', '🧪', '🌍', '🧬', '📜', '⚖️', '💻', '🎨', '🎵', '⚽', '📁'];
+  const icon = icons[SUBJECTS.length % icons.length];
+  
+  SUBJECTS.push({value, label: newCategory, icon});
+  
+  // Save to localStorage for persistence
+  const subjectCategories = SUBJECTS.map(s => s.label);
+  localStorage.setItem('subjectCategories', JSON.stringify(subjectCategories));
+  
+  input.value = '';
+  loadCategories();
+  updateCategoryDropdowns();
+  showToast('学科添加成功', 'success');
+}
+
+function deleteSubjectCategory(index) {
+  const subjectCategories = JSON.parse(localStorage.getItem('subjectCategories')) || [];
+  
+  if (index >= 0 && index < subjectCategories.length) {
+    const deleted = subjectCategories.splice(index, 1);
+    localStorage.setItem('subjectCategories', JSON.stringify(subjectCategories));
+    
+    // Also update SUBJECTS array
+    const deletedLabel = deleted[0];
+    const subIndex = SUBJECTS.findIndex(s => s.label === deletedLabel);
+    if (subIndex !== -1) {
+      SUBJECTS.splice(subIndex, 1);
+    }
+    
+    loadCategories();
+    updateCategoryDropdowns();
+    showToast('已删除学科: ' + deleted[0], 'success');
+  }
+}
+
+function addExamCategory() {
+  const input = document.getElementById('newExamTypeInput');
+  const newCategory = input.value.trim();
+  
+  if (!newCategory) {
+    showToast('请输入考试类型名称', 'error');
+    return;
+  }
+  
+  // Check if category already exists in EXAM_TYPES array
+  if (EXAM_TYPES.find(e => e.label === newCategory)) {
+    showToast('该考试类型已存在', 'error');
+    return;
+  }
+  
+  // Add to EXAM_TYPES array with a generated value
+  let value = newCategory.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!value) {
+    value = 'exam_' + (EXAM_TYPES.length + 1);
+  }
+  
+  EXAM_TYPES.push({value, label: newCategory});
+  
+  // Save to localStorage for persistence
+  const examCategories = EXAM_TYPES.map(e => e.label);
+  localStorage.setItem('examCategories', JSON.stringify(examCategories));
+  
+  input.value = '';
+  loadCategories();
+  updateCategoryDropdowns();
+  showToast('考试类型添加成功', 'success');
+}
+
+function deleteExamCategory(index) {
+  const examCategories = JSON.parse(localStorage.getItem('examCategories')) || [];
+  
+  if (index >= 0 && index < examCategories.length) {
+    const deleted = examCategories.splice(index, 1);
+    localStorage.setItem('examCategories', JSON.stringify(examCategories));
+    
+    // Also update EXAM_TYPES array
+    const deletedLabel = deleted[0];
+    const examIndex = EXAM_TYPES.findIndex(e => e.label === deletedLabel);
+    if (examIndex !== -1) {
+      EXAM_TYPES.splice(examIndex, 1);
+    }
+    
+    loadCategories();
+    updateCategoryDropdowns();
+    showToast('已删除考试类型: ' + deleted[0], 'success');
+  }
+}
+
+// Update showPage function to load categories when page is shown
+const originalShowPage = showPage;
+showPage = function(pageName) {
+  originalShowPage(pageName);
+  if (pageName === 'categories') {
+    loadCategories();
+  }
+};
+
+// Modify initData to also initialize categories
+const originalInitData = initData;
+initData = function() {
+  originalInitData();
+  initCategories();
+  updateCategoryDropdowns();
+};
 
 // ===================== START =====================
 initData();
