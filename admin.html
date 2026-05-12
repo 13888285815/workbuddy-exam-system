@@ -380,6 +380,7 @@ C. 选项三
           <div class="panel-header">
             <h3>题库管理</h3>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <span id="qTotalBadge" class="badge badge-blue" style="padding:5px 12px;font-size:12px"></span>
               <select id="qFilterType" onchange="renderQuestions()" style="width:120px;padding:6px 10px;font-size:12px;border-radius:6px">
                 <option value="">全部类型</option>
                 <option value="single">单选题</option>
@@ -389,6 +390,7 @@ C. 选项三
                 <option value="essay">简答题</option>
               </select>
               <input id="qSearch" type="text" placeholder="搜索题目..." style="width:180px;padding:6px 10px;font-size:12px;border-radius:6px" oninput="renderQuestions()">
+              <button class="btn btn-sm btn-danger" onclick="showPwdConfirm('clearAllQuestions',null,'确认清空全部题库？此操作不可恢复！')">清空题库</button>
               <button class="btn btn-primary btn-sm" onclick="openAddQuestion()">+ 添加题目</button>
             </div>
           </div>
@@ -940,30 +942,34 @@ function parseMarkdownFile(file,callback,interval){
 // Markdown专用解析（支持更丰富的格式）
 function parseMarkdownText(text){
   const qs=[];
+  // 预处理
+  text=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
   // 移除代码块
   text=text.replace(/```[\s\S]*?```/g,'');
-  // 按题目分隔（支持多种格式）
-  const blocks=text.split(/(?:^|\n)(?=#{1,6}\s|\d+[\.、\s]|【|\[)/m);
+  // 按题目分隔
+  const blocks=text.split(/(?:^|\n)(?=#{1,6}\s|\d+[\.、\s]|【|\[单\]|\[多\]|\[判\]|\[填\]|\[简\]|\([A-Z]\))/m);
   let currentType='single';
   for(const raw of blocks){
     const block=raw.trim();
-    if(!block)continue;
+    if(!block||block.length<5)continue;
     // 检测题型标记
-    if(/【单选题】/.test(block))currentType='single';
-    else if(/【多选题】/.test(block))currentType='multi';
-    else if(/【判断题】/.test(block))currentType='judge';
-    else if(/【填空题】/.test(block))currentType='fill';
-    else if(/【简答题】/.test(block))currentType='essay';
+    if(/【单选题】|#.*单选/.test(block))currentType='single';
+    else if(/【多选题】|#.*多选/.test(block))currentType='multi';
+    else if(/【判断题】|#.*判断/.test(block))currentType='judge';
+    else if(/【填空题】|#.*填空/.test(block))currentType='fill';
+    else if(/【简答题】|#.*简答/.test(block))currentType='essay';
+    else if(/\[单\]/.test(block))currentType='single';
+    else if(/\[多\]/.test(block))currentType='multi';
+    else if(/\[判\]/.test(block))currentType='judge';
+    else if(/\[填\]/.test(block))currentType='fill';
+    else if(/\[简\]/.test(block))currentType='essay';
     // 检测Markdown标题格式
     if(/^#{1,6}\s/.test(block)){
-      const heading=block.match(/^#{1,6}\s+(.+)/);
-      if(heading){
-        // 尝试解析标题后的内容作为题目
-        const remaining=block.replace(/^#{1,6}\s+.+\n*/,'');
-        if(remaining.trim()){
-          const parsed=parseQuestionBlock(remaining.trim(),currentType);
-          if(parsed)qs.push(parsed);
-        }
+      const lines=block.split('\n');
+      const remaining=lines.slice(1).join('\n').trim();
+      if(remaining){
+        const parsed=parseQuestionBlock(remaining,currentType);
+        if(parsed)qs.push(parsed);
       }
       continue;
     }
@@ -977,35 +983,44 @@ function parseMarkdownText(text){
 // 解析单个题目块
 function parseQuestionBlock(block,defaultType){
   if(!block||block.length<5)return null;
-  const lines=block.split('\n').map(l=>l.trim()).filter(Boolean);
+  const lines=block.split('\n').map(l=>l.trim()).filter(l=>l&&l.length>0);
   if(lines.length<1)return null;
   // 移除Markdown列表标记
-  let contentLine=lines[0].replace(/^[-*+]\s+/,'').replace(/^\d+[\.、\s]+/,'').replace(/^#{1,6}\s+/,'').trim();
+  let contentLine=lines[0]
+    .replace(/^[-*+]\s+/,'')
+    .replace(/^\d+[\.、\s　]+/,'')
+    .replace(/^#{1,6}\s+/,'')
+    .replace(/【.*?】/g,'')
+    .replace(/\[单\]|\[多\]|\[判\]|\[填\]|\[简\]/g,'')
+    .trim();
   if(!contentLine)return null;
   // 提取选项（A. B. C. 或 - 选项）
-  const optLines=lines.filter(l=>/^[A-Ea-e][\.、\s]/.test(l)||/^[-*+]\s+[A-Z]/.test(l));
+  const optLines=lines.filter(l=>/^[A-Ea-e][\.、\s　]/.test(l)||/^[-*+]\s+[A-Z]/i.test(l));
   const options=optLines.map(l=>{
-    const m=l.match(/^([A-Ea-e])[\.、\s](.*)/);
+    const m=l.match(/^([A-Ea-e])[\.、\s　](.*)/);
     if(m)return m[1].toUpperCase()+'. '+m[2].trim();
-    const m2=l.match(/^[-*+]\s+([A-Z])\s+(.*)/);
+    const m2=l.match(/^[-*+]\s+([A-Z])\s+(.*)/i);
     if(m2)return m2[1]+'. '+m2[2].trim();
     return l.replace(/^[-*+]\s+/,'');
   });
-  // 提取答案
-  let ansLine=lines.find(l=>/^答案[：:]/i.test(l));
-  let answer=ansLine?ansLine.replace(/^答案[：:]\s*/i,'').trim():'';
+  // 提取答案 - 多种格式
+  let ansLine=lines.find(l=>/^答案[：:]/i.test(l))||lines.find(l=>/^正确答案[：:]/i.test(l))||lines.find(l=>/^答[：:]/i.test(l));
+  let answer='';
+  if(ansLine){
+    answer=ansLine.replace(/^答案[：:]/i,'').replace(/^正确答案[：:]/i,'').replace(/^答[：:]/i,'').trim();
+  }
   // 提取解析
   let explainLine=lines.find(l=>/^(解析|解释|分析|说明)[：:]/i.test(l));
   let explain=explainLine?explainLine.replace(/^(解析|解释|分析|说明)[：:]\s*/i,'').trim():'';
   // 确定题型
   let type=defaultType;
   if(options.length>0&&answer.length>1&&/^[A-E]+$/i.test(answer))type='multi';
-  else if(options.length>0)type='single';
-  else if(/正确|错误|是|否|true|false/.test(answer)&&options.length===0)type='judge';
+  else if(options.length>0&&/^[A-E]$/i.test(answer))type='single';
+  else if(/正确|错误|对|错|是|否|true|false/.test(answer)&&options.length===0)type='judge';
   else if(contentLine.includes('___')||contentLine.includes('____'))type='fill';
-  else if(options.length===0&&answer.length>10)type='essay';
+  else if(options.length===0&&answer.length>=5)type='essay';
   return {
-    id:'q'+Date.now()+Math.random().toString(36).slice(2),
+    id:'q'+Date.now()+Math.random().toString(36).slice(2,6),
     type,
     content:contentLine,
     options,
@@ -1017,41 +1032,67 @@ function parseQuestionBlock(block,defaultType){
 
 function parseText(text){
   const qs=[];
-  // Split by question number
-  const blocks=text.split(/\n(?=\d+[\.、\s])/);
+  // 预处理：统一换行符，去除多余空白
+  text=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').replace(/\t/g,' ');
+  // 按题目分隔 - 多种分隔方式
+  const blocks=text.split(/\n\s*(?=\d+[\.、\s　]|【|\[[单多判填简]\]|第[一二三四五六七八九十\d]+[题道]|\([A-Z]\))/m);
   let currentType='single';
   for(const raw of blocks){
     const block=raw.trim();
-    if(!block)continue;
-    // Detect type hints
+    if(!block||block.length<5)continue;
+    // 检测题型标记
     if(/【单选题】/.test(block))currentType='single';
     else if(/【多选题】/.test(block))currentType='multi';
     else if(/【判断题】/.test(block))currentType='judge';
     else if(/【填空题】/.test(block))currentType='fill';
     else if(/【简答题】/.test(block))currentType='essay';
-    // Extract question
-    const lines=block.split('\n').map(l=>l.trim()).filter(Boolean);
-    if(lines.length<2)continue;
-    let contentLine=lines[0].replace(/^\d+[\.、\s]+/,'').replace(/【.*?】/g,'').trim();
-    if(!contentLine)contentLine=lines[1]?.replace(/^\d+[\.、\s]+/,'').trim()||'';
+    else if(/\[单\]/.test(block))currentType='single';
+    else if(/\[多\]/.test(block))currentType='multi';
+    else if(/\[判\]/.test(block))currentType='judge';
+    // 提取题目
+    const lines=block.split('\n').map(l=>l.trim()).filter(l=>l&&l.length>0);
+    if(lines.length<1)continue;
+    // 题目内容 - 移除序号
+    let contentLine=lines[0]
+      .replace(/^\d+[\.、\s　]+/,'')
+      .replace(/^第[一二三四五六七八九十\d]+[题道]\s*/,'')
+      .replace(/【.*?】/g,'')
+      .replace(/\[单\]|\[多\]|\[判\]|\[填\]|\[简\]/g,'')
+      .trim();
+    if(!contentLine)contentLine=lines[1]?.replace(/^\d+[\.、\s　]+/,'').trim()||'';
     if(!contentLine)continue;
-    // Options
-    const optLines=lines.filter(l=>/^[A-Ea-e][\.、\s]/.test(l));
-    const options=optLines.map(l=>{const m=l.match(/^([A-Ea-e])[\.、\s](.*)/);return m?m[1].toUpperCase()+'. '+m[2].trim():l;});
-    // Answer
-    let ansLine=lines.find(l=>/^答案[：:]/i.test(l));
-    let answer=ansLine?ansLine.replace(/^答案[：:]\s*/i,'').trim():'';
-    // Explain
-    let explainLine=lines.find(l=>/^(解析|解释|分析)[：:]/i.test(l));
-    let explain=explainLine?explainLine.replace(/^(解析|解释|分析)[：:]\s*/i,'').trim():'';
-    // Auto-detect type
+    // 提取选项（A. B. C. 或 A、 B、 C、）
+    const optLines=lines.filter(l=>/^[A-Ea-e][\.、\s　]/.test(l));
+    const options=optLines.map(l=>{
+      const m=l.match(/^([A-Ea-e])[\.、\s　]+(.*)/);
+      if(m)return m[1].toUpperCase()+'. '+m[2].trim();
+      return l;
+    });
+    // 提取答案 - 多种格式
+    let ansLine=lines.find(l=>/^答案[：:]/i.test(l))||lines.find(l=>/^正确答案[：:]/i.test(l))||lines.find(l=>/^答[：:]/i.test(l));
+    let answer='';
+    if(ansLine){
+      answer=ansLine.replace(/^答案[：:]/i,'').replace(/^正确答案[：:]/i,'').replace(/^答[：:]/i,'').trim();
+    }
+    // 提取解析
+    let explainLine=lines.find(l=>/^(解析|解释|分析|说明|备注)[：:]/.test(l));
+    let explain='';
+    if(explainLine){
+      explain=explainLine.replace(/^(解析|解释|分析|说明|备注)[：:]/i,'').trim();
+    }
+    // 自动检测题型
     let type=currentType;
-    if(options.length>0&&answer.length>1&&/^[A-E]+$/.test(answer))type='multi';
-    else if(options.length>0)type='single';
-    else if(/正确|错误|是|否/.test(answer)&&options.length===0)type='judge';
-    else if(contentLine.includes('___'))type='fill';
-    else if(options.length===0&&answer.length>10)type='essay';
-    qs.push({id:'q'+Date.now()+Math.random().toString(36).slice(2),type,content:contentLine,options,answer,score:type==='essay'?10:type==='multi'?4:2,explain});
+    // 多选：答案超过1个字母
+    if(options.length>0&&answer.length>1&&/^[A-Ea-e]+$/.test(answer))type='multi';
+    // 单选：有选项且答案1个字母
+    else if(options.length>0&&/^[A-Ea-e]$/i.test(answer))type='single';
+    // 判断题：答案包含正确/错误/对/错/是/否
+    else if(/正确|错误|对|错|是|否|true|false/.test(answer)&&options.length===0)type='judge';
+    // 填空题：题目包含下划线
+    else if(contentLine.includes('___')||contentLine.includes('____')||contentLine.includes('（）')||contentLine.includes('( )'))type='fill';
+    // 简答题：没有选项且答案较长
+    else if(options.length===0&&answer.length>=5)type='essay';
+    qs.push({id:'q'+Date.now()+Math.random().toString(36).slice(2,6),type,content:contentLine,options,answer,score:type==='essay'?10:type==='multi'?4:2,explain});
   }
   return qs;
 }
@@ -1111,6 +1152,7 @@ function importParsedQuestions(){
 let editingQId=null;
 function renderQuestions(){
   let qs=DB.questions();
+  document.getElementById('qTotalBadge').textContent='共 '+qs.length+' 道题目';
   const type=document.getElementById('qFilterType').value;
   const search=document.getElementById('qSearch').value.toLowerCase();
   if(type)qs=qs.filter(q=>q.type===type);
@@ -1326,7 +1368,16 @@ function confirmPwdAction(){
     restoreFromTrash(pwdConfirmTarget);
   } else if(pwdConfirmType==='deletePermanent'){
     deletePermanent(pwdConfirmTarget);
+  } else if(pwdConfirmType==='clearAllQuestions'){
+    clearAllQuestions();
   }
+}
+
+// 清空全部题库
+function clearAllQuestions(){
+  DB.set('questions',[]);
+  showToast('题库已清空，可重新导入', 'success');
+  renderQuestions();
 }
 
 // ===================== TRASH =====================
