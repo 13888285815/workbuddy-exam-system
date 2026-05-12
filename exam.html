@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>在线考试 — 在线考试系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--blue:#185FA5;--blue-light:#E6F1FB;--green:#27500A;--green-bg:#EAF3DE;--red:#A32D2D;--red-bg:#FCEBEB;--amber:#854F0B;--amber-bg:#FAEEDA;--text:#1a1a2e;--text2:#555;--text3:#888;--border:#e8edf2;--bg:#f0f4f8;--white:#fff;--radius:12px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+/* Auth */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.auth-box{background:var(--white);border-radius:16px;border:1px solid var(--border);padding:40px;width:400px;max-width:95vw}
+.auth-box h2{font-size:20px;font-weight:500;text-align:center;margin-bottom:6px}
+.auth-box .sub{font-size:13px;color:var(--text3);text-align:center;margin-bottom:28px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;color:var(--text);font-family:inherit;outline:none;background:var(--white);transition:border-color .15s}
+input:focus,select:focus{border-color:var(--blue)}
+.auth-btn{width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:background .15s}
+.auth-btn:hover{background:#0C447C}
+.auth-links{text-align:center;margin-top:16px;font-size:13px;color:var(--text3)}
+.auth-links a{color:var(--blue);cursor:pointer;text-decoration:none}
+/* Home */
+.home-header{background:var(--white);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.home-header h1{font-size:15px;font-weight:500}
+.header-right{display:flex;align-items:center;gap:12px}
+.user-info{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
+.avatar{width:32px;height:32px;background:var(--blue-light);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:var(--blue)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--white);color:var(--text);transition:all .15s;font-family:inherit}
+.btn:hover{background:var(--bg)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:#0C447C;border-color:#0C447C}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:6px}
+/* Paper list */
+.page-content{max-width:900px;margin:0 auto;padding:24px}
+.section-title{font-size:15px;font-weight:500;margin-bottom:16px;color:var(--text)}
+.paper-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.paper-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:all .2s}
+.paper-card:hover{border-color:var(--blue);transform:translateY(-2px)}
+.paper-card h3{font-size:14px;font-weight:500;margin-bottom:10px;color:var(--text)}
+.paper-meta{font-size:12px;color:var(--text3);line-height:2}
+.paper-card .start-btn{margin-top:14px;width:100%;padding:9px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;transition:background .15s}
+.paper-card .start-btn:hover{background:#0C447C}
+/* Exam */
+#examPage{display:none;min-height:100vh;background:var(--bg)}
+.exam-header{background:var(--white);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.exam-title{font-size:14px;font-weight:500;flex:1;text-align:center}
+.timer{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:var(--blue);background:var(--blue-light);padding:6px 14px;border-radius:20px}
+.timer.warning{color:var(--red);background:var(--red-bg)}
+.exam-body{max-width:800px;margin:0 auto;padding:24px;display:flex;gap:20px}
+.exam-main{flex:1;min-width:0}
+.exam-sidebar{width:200px;flex-shrink:0}
+/* Question */
+.q-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.q-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.q-num{background:var(--blue);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex-shrink:0}
+.q-num.answered{background:#639922}
+.q-type-tag{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--blue-light);color:var(--blue)}
+.q-score{font-size:11px;color:var(--text3)}
+.q-text{font-size:14px;color:var(--text);line-height:1.7;margin-bottom:14px}
+/* Options */
+.options{display:flex;flex-direction:column;gap:8px}
+.option-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;font-size:13px;color:var(--text2)}
+.option-item:hover{border-color:#aaa;background:#fafafa}
+.option-item.selected{border-color:var(--blue);background:var(--blue-light);color:var(--text)}
+.option-item input{margin-top:1px;flex-shrink:0;cursor:pointer;accent-color:var(--blue)}
+/* Judge */
+.judge-options{display:flex;gap:12px}
+.judge-btn{flex:1;padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;text-align:center;font-size:13px;transition:all .15s;background:var(--white)}
+.judge-btn:hover{border-color:#aaa;background:#fafafa}
+.judge-btn.selected-true{border-color:#639922;background:var(--green-bg);color:var(--green);font-weight:500}
+.judge-btn.selected-false{border-color:#e24b4a;background:var(--red-bg);color:var(--red);font-weight:500}
+/* Fill / Essay */
+.fill-input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s}
+.fill-input:focus{border-color:var(--blue)}
+textarea.fill-input{resize:vertical;min-height:100px}
+/* Nav dots */
+.dot-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.dot{width:32px;height:32px;border-radius:6px;background:var(--bg);border:1px solid var(--border);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text3)}
+.dot:hover{border-color:#aaa}
+.dot.ans{background:#639922;color:#fff;border-color:#639922}
+.dot.cur{border-color:var(--blue);color:var(--blue);font-weight:500}
+.sidebar-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.sidebar-card h4{font-size:13px;font-weight:500;margin-bottom:12px}
+.submit-btn{width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:background .15s}
+.submit-btn:hover{background:#0C447C}
+.progress-wrap{background:#f0f4f8;border-radius:20px;height:6px;overflow:hidden;margin:8px 0}
+.progress-bar{height:100%;background:#639922;border-radius:20px;transition:width .3s}
+/* Result */
+#resultPage{display:none;min-height:100vh;background:var(--bg)}
+.result-wrap{max-width:800px;margin:0 auto;padding:24px}
+.result-hero{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:40px;text-align:center;margin-bottom:20px}
+.score-circle{width:120px;height:120px;border-radius:50%;margin:0 auto 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid var(--blue)}
+.score-circle.pass{border-color:#639922;background:#f0f8ea}
+.score-circle.fail{border-color:#e24b4a;background:var(--red-bg)}
+.score-num{font-size:36px;font-weight:500;line-height:1}
+.score-total{font-size:12px;color:var(--text3);margin-top:4px}
+.result-hero h2{font-size:20px;font-weight:500;margin-bottom:8px}
+.result-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:24px}
+.rst{text-align:center}
+.rst .v{font-size:22px;font-weight:500}
+.rst .l{font-size:12px;color:var(--text3);margin-top:4px}
+/* Answer review */
+.review-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.review-card .r-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.r-status{font-size:11px;padding:2px 8px;border-radius:4px}
+.r-correct{background:var(--green-bg);color:var(--green)}
+.r-wrong{background:var(--red-bg);color:var(--red)}
+.r-partial{background:var(--amber-bg);color:var(--amber)}
+.r-manual{background:#f0f4f8;color:var(--text3)}
+.r-q{font-size:13px;color:var(--text);line-height:1.6;margin-bottom:8px}
+.r-ans{font-size:12px;line-height:1.8}
+.r-ans .my{color:var(--text2)}
+.r-ans .std{color:var(--green);font-weight:500}
+.r-explain{font-size:12px;color:var(--text3);margin-top:6px;padding:6px 10px;background:#fafafa;border-radius:6px}
+/* History */
+.history-list{margin-top:20px}
+/* Badge */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-green{background:var(--green-bg);color:var(--green)}
+.badge-red{background:var(--red-bg);color:var(--red)}
+/* Toast */
+.toast-wrap{position:fixed;top:20px;right:20px;z-index:999}
+.toast{background:#1a1a2e;color:#fff;padding:12px 16px;border-radius:10px;font-size:13px;opacity:0;transform:translateX(20px);transition:all .3s;margin-bottom:8px}
+.toast.show{opacity:1;transform:none}
+.toast.error{background:var(--red)}
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+.empty{text-align:center;padding:40px;color:var(--text3);font-size:13px}
+@media(max-width:640px){.exam-body{flex-direction:column}.exam-sidebar{width:100%}.result-stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<!-- Auth -->
+<div id="authPage" class="auth-wrap">
+  <div class="auth-box">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="width:52px;height:52px;background:var(--amber-bg);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13l2 2 4-4"/></svg>
+      </div>
+    </div>
+    <h2>在线考试系统</h2>
+    <p class="sub">登录后选择试卷开始考试</p>
+    <div class="form-group"><label>用户名</label><input id="authUser" type="text" placeholder="请输入用户名"></div>
+    <div class="form-group"><label>密码</label><input id="authPass" type="password" placeholder="请输入密码"></div>
+    <button class="auth-btn" onclick="doLogin()">登录</button>
+    <div class="auth-links">
+      没有账号？联系管理员开通 · <a href="index.html">返回首页</a>
+    </div>
+    <p style="text-align:center;font-size:11px;color:#ccc;margin-top:12px">测试账号：student1 / 123456</p>
+  </div>
+</div>
+
+<!-- Home -->
+<div id="homePage" style="display:none">
+  <div class="home-header">
+    <a href="index.html" style="text-decoration:none;color:var(--text2);font-size:13px;display:flex;align-items:center;gap:4px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </a>
+    <h1 style="position:absolute;left:50%;transform:translateX(-50%)">在线考试系统</h1>
+    <div class="header-right">
+      <div class="user-info">
+        <div class="avatar" id="homeAvatar">U</div>
+        <span id="homeUserName">用户</span>
+      </div>
+      <button class="btn btn-sm" onclick="doLogout()">退出</button>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="tabs">
+      <div class="tab active" onclick="showHomeTab(this,'tab-available')">可用试卷</div>
+      <div class="tab" onclick="showHomeTab(this,'tab-history')">考试记录</div>
+    </div>
+    <div id="tab-available">
+      <div class="section-title">选择试卷开始考试</div>
+      <div class="paper-grid" id="paperGrid"></div>
+    </div>
+    <div id="tab-history" style="display:none">
+      <div class="section-title">我的考试记录</div>
+      <div id="myHistory"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Exam -->
+<div id="examPage">
+  <div class="exam-header">
+    <div style="width:120px;font-size:13px;color:var(--text3)" id="examUserInfo"></div>
+    <div class="exam-title" id="examTitle">试卷名称</div>
+    <div class="timer" id="timerDisplay">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span id="timerText">60:00</span>
+    </div>
+  </div>
+  <div class="exam-body">
+    <div class="exam-main" id="examQuestions"></div>
+    <div class="exam-sidebar">
+      <div class="sidebar-card">
+        <h4>答题进度</h4>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:4px">
+          已答 <strong id="answeredCount">0</strong> / <strong id="totalCount">0</strong> 题
+        </div>
+        <div class="progress-wrap"><div class="progress-bar" id="examProgress" style="width:0%"></div></div>
+      </div>
+      <div class="sidebar-card">
+        <h4>题目导航</h4>
+        <div class="dot-grid" id="dotGrid"></div>
+      </div>
+      <button class="submit-btn" onclick="confirmSubmit()">提交试卷</button>
+    </div>
+  </div>
+</div>
+
+<!-- Result -->
+<div id="resultPage">
+  <div class="home-header">
+    <span></span>
+    <h1>考试结果</h1>
+    <button class="btn btn-sm" onclick="backHome()">返回首页</button>
+  </div>
+  <div class="result-wrap">
+    <div class="result-hero">
+      <div class="score-circle" id="scoreCircle">
+        <div class="score-num" id="scoreNum">0</div>
+        <div class="score-total" id="scoreDenom">/100</div>
+      </div>
+      <h2 id="resultVerdict">成绩</h2>
+      <p style="font-size:13px;color:var(--text3)" id="resultSubtitle"></p>
+      <div class="result-stats">
+        <div class="rst"><div class="v" id="rs-correct">-</div><div class="l">答对题数</div></div>
+        <div class="rst"><div class="v" id="rs-wrong">-</div><div class="l">答错题数</div></div>
+        <div class="rst"><div class="v" id="rs-rate">-</div><div class="l">正确率</div></div>
+        <div class="rst"><div class="v" id="rs-time">-</div><div class="l">用时</div></div>
+      </div>
+    </div>
+
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
+      <h3 style="font-size:14px;font-weight:500;margin-bottom:16px">逐题解析</h3>
+      <div id="reviewList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+const DB={
+  get(k){try{return JSON.parse(localStorage.getItem('exam_'+k)||'null')}catch{return null}},
+  set(k,v){localStorage.setItem('exam_'+k,JSON.stringify(v))},
+  users(){return this.get('users')||[]},
+  questions(){return this.get('questions')||[]},
+  papers(){return this.get('papers')||[]},
+  records(){return this.get('records')||[]}
+};
+
+let currentUser=null;
+let currentPaper=null;
+let currentQuestions=[];
+let userAnswers={};
+let timerInterval=null;
+let timeLeft=0;
+let startTime=null;
+
+// ===================== AUTH =====================
+function doLogin(){
+  const u=document.getElementById('authUser').value.trim();
+  const p=document.getElementById('authPass').value;
+  const users=DB.users();
+  const user=users.find(x=>x.username===u&&x.password===p&&x.status==='active');
+  if(!user){showToast('用户名或密码错误','error');return;}
+  currentUser=user;
+  showHomePage();
+}
+document.getElementById('authPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+function doLogout(){
+  currentUser=null;
+  document.getElementById('homePage').style.display='none';
+  document.getElementById('authPage').style.display='flex';
+}
+
+// ===================== HOME =====================
+function showHomePage(){
+  document.getElementById('authPage').style.display='none';
+  document.getElementById('examPage').style.display='none';
+  document.getElementById('resultPage').style.display='none';
+  document.getElementById('homePage').style.display='block';
+  document.getElementById('homeAvatar').textContent=currentUser.name[0];
+  document.getElementById('homeUserName').textContent=currentUser.name;
+  renderPapers();
+}
+
+function showHomeTab(el,tab){
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['tab-available','tab-history'].forEach(id=>{document.getElementById(id).style.display=id===tab?'block':'none';});
+  if(tab==='tab-history')renderHistory();
+}
+
+function renderPapers(){
+  const papers=DB.papers().filter(p=>p.status==='published');
+  const grid=document.getElementById('paperGrid');
+  grid.innerHTML=papers.length?papers.map(p=>{
+    const qs=DB.questions().filter(q=>p.questionIds?.includes(q.id));
+    return `<div class="paper-card">
+      <h3>${p.name}</h3>
+      <div class="paper-meta">
+        <div>题目数量：${qs.length} 道</div>
+        <div>考试时长：${p.duration} 分钟</div>
+        <div>总分：${p.total} 分 · 及格：${p.pass} 分</div>
+        ${p.desc?`<div style="margin-top:4px">${p.desc}</div>`:''}
+      </div>
+      <button class="start-btn" onclick="startExam('${p.id}')">开始考试</button>
+    </div>`;
+  }).join(''):'<div class="empty" style="grid-column:1/-1">暂无可用试卷，请联系管理员发布试卷</div>';
+}
+
+function renderHistory(){
+  const records=DB.records().filter(r=>r.userId===currentUser.id).reverse();
+  const container=document.getElementById('myHistory');
+  container.innerHTML=records.length?`
+    <table style="width:100%;border-collapse:collapse;font-size:13px;background:var(--white);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)">
+      <thead><tr style="background:#fafafa">
+        <th style="text-align:left;padding:10px 14px;color:var(--text3);font-weight:500;font-size:12px;border-bottom:1px solid var(--border)">试卷</th>
+        <th style="text-align:left;padding:10px 14px;color:var(--text3);font-weight:500;font-size:12px;border-bottom:1px solid var(--border)">得分</th>
+        <th style="text-align:left;padding:10px 14px;color:var(--text3);font-weight:500;font-size:12px;border-bottom:1px solid var(--border)">通过</th>
+        <th style="text-align:left;padding:10px 14px;color:var(--text3);font-weight:500;font-size:12px;border-bottom:1px solid var(--border)">时间</th>
+      </tr></thead>
+      <tbody>${records.map(r=>`<tr>
+        <td style="padding:10px 14px;border-bottom:1px solid var(--border)">${r.paperName}</td>
+        <td style="padding:10px 14px;border-bottom:1px solid var(--border)"><strong>${r.score}</strong> / ${r.total}</td>
+        <td style="padding:10px 14px;border-bottom:1px solid var(--border)">${r.passed?'<span class="badge badge-green">通过</span>':'<span class="badge badge-red">未通过</span>'}</td>
+        <td style="padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text3);font-size:12px">${r.time}</td>
+      </tr>`).join('')}</tbody>
+    </table>`:'<div class="empty">暂无考试记录</div>';
+}
+
+// ===================== EXAM =====================
+function startExam(paperId){
+  const paper=DB.papers().find(p=>p.id===paperId);
+  if(!paper){showToast('试卷不存在','error');return;}
+  const allQs=DB.questions();
+  const qs=paper.questionIds?.map(id=>allQs.find(q=>q.id===id)).filter(Boolean)||[];
+  if(!qs.length){showToast('该试卷暂无题目','error');return;}
+  currentPaper=paper;
+  currentQuestions=qs;
+  userAnswers={};
+  timeLeft=paper.duration*60;
+  startTime=Date.now();
+  document.getElementById('homePage').style.display='none';
+  document.getElementById('examPage').style.display='block';
+  document.getElementById('examTitle').textContent=paper.name;
+  document.getElementById('examUserInfo').textContent=currentUser.name;
+  document.getElementById('totalCount').textContent=qs.length;
+  renderExamQuestions();
+  startTimer();
+}
+
+function renderExamQuestions(){
+  const typeLabel={single:'单选题',multi:'多选题',judge:'判断题',fill:'填空题',essay:'简答题'};
+  document.getElementById('examQuestions').innerHTML=currentQuestions.map((q,i)=>`
+    <div class="q-card" id="qcard-${i}">
+      <div class="q-header">
+        <div class="q-num ${userAnswers[q.id]!==undefined&&userAnswers[q.id]!==''?'answered':''}" id="qnum-${i}">${i+1}</div>
+        <span class="q-type-tag">${typeLabel[q.type]}</span>
+        <span class="q-score">${q.score}分</span>
+      </div>
+      <div class="q-text">${q.content}</div>
+      ${renderAnswerInput(q,i)}
+    </div>`).join('');
+  renderDots();
+  updateProgress();
+}
+
+function renderAnswerInput(q,i){
+  if(q.type==='single'){
+    return `<div class="options">${q.options.map((opt,oi)=>`
+      <div class="option-item ${userAnswers[q.id]===opt[0]?'selected':''}" onclick="selectSingle('${q.id}',${i},'${opt[0]}')">
+        <input type="radio" name="q${i}" ${userAnswers[q.id]===opt[0]?'checked':''} style="pointer-events:none">
+        <span>${opt}</span>
+      </div>`).join('')}</div>`;
+  }
+  if(q.type==='multi'){
+    const selected=(userAnswers[q.id]||[]);
+    return `<div class="options">${q.options.map((opt,oi)=>`
+      <div class="option-item ${selected.includes(opt[0])?'selected':''}" onclick="toggleMulti('${q.id}',${i},'${opt[0]}')">
+        <input type="checkbox" ${selected.includes(opt[0])?'checked':''} style="pointer-events:none">
+        <span>${opt}</span>
+      </div>`).join('')}</div>
+      <p style="font-size:11px;color:var(--text3);margin-top:8px">多选题，请选择所有正确答案</p>`;
+  }
+  if(q.type==='judge'){
+    const val=userAnswers[q.id];
+    return `<div class="judge-options">
+      <div class="judge-btn ${val==='正确'?'selected-true':''}" onclick="selectJudge('${q.id}',${i},'正确')">✓ 正确</div>
+      <div class="judge-btn ${val==='错误'?'selected-false':''}" onclick="selectJudge('${q.id}',${i},'错误')">✗ 错误</div>
+    </div>`;
+  }
+  if(q.type==='fill'){
+    return `<input class="fill-input" type="text" placeholder="请输入答案" value="${userAnswers[q.id]||''}" oninput="saveText('${q.id}',${i},this.value)">`;
+  }
+  if(q.type==='essay'){
+    return `<textarea class="fill-input" rows="5" placeholder="请输入答案..." oninput="saveText('${q.id}',${i},this.value)">${userAnswers[q.id]||''}</textarea>
+      <p style="font-size:11px;color:var(--text3);margin-top:6px">简答题由老师人工评分，自动评分仅供参考</p>`;
+  }
+  return '';
+}
+
+function selectSingle(qid,idx,val){
+  userAnswers[qid]=val;
+  updateQuestionUI(idx);
+}
+function toggleMulti(qid,idx,val){
+  if(!userAnswers[qid])userAnswers[qid]=[];
+  const arr=userAnswers[qid];
+  const i=arr.indexOf(val);
+  if(i>=0)arr.splice(i,1);else arr.push(val);
+  arr.sort();
+  updateQuestionUI(idx);
+}
+function selectJudge(qid,idx,val){
+  userAnswers[qid]=val;
+  updateQuestionUI(idx);
+}
+function saveText(qid,idx,val){
+  userAnswers[qid]=val;
+  updateDot(idx);
+  updateProgress();
+}
+
+function updateQuestionUI(idx){
+  const q=currentQuestions[idx];
+  const card=document.getElementById('qcard-'+idx);
+  if(!card)return;
+  // Re-render options only
+  const newHtml=renderAnswerInput(q,idx);
+  const existing=card.querySelector('.options,.judge-options,.fill-input');
+  if(existing){
+    const tmp=document.createElement('div');tmp.innerHTML=newHtml;
+    card.replaceChild(tmp.firstChild,existing);
+  }
+  updateDot(idx);
+  updateProgress();
+}
+
+function updateDot(idx){
+  const q=currentQuestions[idx];
+  const dot=document.getElementById('dot-'+idx);
+  const num=document.getElementById('qnum-'+idx);
+  const isAns=isAnswered(q);
+  if(dot){dot.className='dot'+(isAns?' ans':'')+(idx===getCurrentScrollIdx()?' cur':'');}
+  if(num)num.className='q-num'+(isAns?' answered':'');
+}
+function getCurrentScrollIdx(){return 0;}
+function isAnswered(q){
+  const a=userAnswers[q.id];
+  if(a===undefined||a===null||a==='')return false;
+  if(Array.isArray(a))return a.length>0;
+  return true;
+}
+function renderDots(){
+  document.getElementById('dotGrid').innerHTML=currentQuestions.map((q,i)=>
+    `<div class="dot ${isAnswered(q)?'ans':''}" id="dot-${i}" onclick="scrollToQ(${i})" title="第${i+1}题">${i+1}</div>`
+  ).join('');
+}
+function scrollToQ(idx){
+  document.getElementById('qcard-'+idx)?.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function updateProgress(){
+  const answered=currentQuestions.filter(q=>isAnswered(q)).length;
+  document.getElementById('answeredCount').textContent=answered;
+  document.getElementById('examProgress').style.width=Math.round(answered/currentQuestions.length*100)+'%';
+  renderDots();
+}
+
+// ===================== TIMER =====================
+function startTimer(){
+  clearInterval(timerInterval);
+  updateTimerDisplay();
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    updateTimerDisplay();
+    if(timeLeft<=0){clearInterval(timerInterval);showToast('时间到，自动提交！');submitExam();}
+    if(timeLeft===300)showToast('还剩5分钟！','error');
+  },1000);
+}
+function updateTimerDisplay(){
+  const m=Math.floor(timeLeft/60),s=timeLeft%60;
+  document.getElementById('timerText').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const el=document.getElementById('timerDisplay');
+  if(timeLeft<300)el.classList.add('warning');else el.classList.remove('warning');
+}
+
+// ===================== SUBMIT =====================
+function confirmSubmit(){
+  const answered=currentQuestions.filter(q=>isAnswered(q)).length;
+  const unanswered=currentQuestions.length-answered;
+  if(unanswered>0){
+    if(!confirm(`还有 ${unanswered} 道题未作答，确认提交？`))return;
+  } else {
+    if(!confirm('确认提交试卷？'))return;
+  }
+  submitExam();
+}
+
+function submitExam(){
+  clearInterval(timerInterval);
+  const usedSeconds=Math.round((Date.now()-startTime)/1000);
+  const usedMin=Math.floor(usedSeconds/60);
+  const usedSec=usedSeconds%60;
+  const durationStr=`${usedMin}分${usedSec}秒`;
+
+  // Scoring
+  let totalScore=0;let correctCount=0;let wrongCount=0;
+  const details=currentQuestions.map(q=>{
+    const userAns=userAnswers[q.id];
+    let status='unanswered';let got=0;
+    if(q.type==='single'||q.type==='judge'){
+      if(userAns&&userAns===q.answer){status='correct';got=q.score;correctCount++;}
+      else if(userAns){status='wrong';wrongCount++;}
+    } else if(q.type==='multi'){
+      const ua=(Array.isArray(userAns)?userAns.join(''):userAns||'').toUpperCase().split('').sort().join('');
+      const sa=q.answer.toUpperCase().split('').sort().join('');
+      if(ua===sa){status='correct';got=q.score;correctCount++;}
+      else if(userAns&&userAns.length>0){
+        const correct=sa.split('').filter(c=>ua.includes(c)).length;
+        const total=sa.length;
+        if(correct>0&&correct<total){status='partial';got=Math.floor(q.score*correct/total);}
+        else{status='wrong';wrongCount++;}
+      }
+    } else if(q.type==='fill'){
+      const ua=(userAns||'').trim().toLowerCase();
+      const sa=(q.answer||'').trim().toLowerCase();
+      if(ua&&(ua===sa||sa.split(/[,，]/).map(s=>s.trim().toLowerCase()).includes(ua))){
+        status='correct';got=q.score;correctCount++;
+      } else if(ua) {status='wrong';wrongCount++;}
+    } else if(q.type==='essay'){
+      // Manual grading - give partial credit based on keyword match
+      const ua=(userAns||'').toLowerCase();
+      const sa=(q.answer||'').toLowerCase();
+      if(!ua){status='unanswered';}
+      else {
+        const keywords=sa.split(/\s+/).filter(w=>w.length>2).slice(0,5);
+        const matched=keywords.filter(k=>ua.includes(k)).length;
+        const ratio=keywords.length>0?matched/keywords.length:0;
+        got=Math.round(q.score*ratio*0.8);
+        status=ratio>0.6?'correct':ratio>0?'partial':'wrong';
+        if(status==='correct')correctCount++;else if(status!=='unanswered')wrongCount++;
+      }
+    }
+    totalScore+=got;
+    return {qid:q.id,type:q.type,content:q.content,options:q.options,userAnswer:userAns,correctAnswer:q.answer,explain:q.explain,status,got,max:q.score};
+  });
+
+  const passed=totalScore>=currentPaper.pass;
+  const record={
+    id:'r'+Date.now(),userId:currentUser.id,userName:currentUser.name,
+    paperId:currentPaper.id,paperName:currentPaper.name,
+    score:totalScore,total:currentPaper.total,pass:currentPaper.pass,
+    passed,correctCount,wrongCount,duration:durationStr,
+    details,time:new Date().toLocaleString()
+  };
+  const records=DB.records();records.push(record);DB.set('records',records);
+
+  // Show result
+  showResult(record);
+}
+
+// ===================== RESULT =====================
+function showResult(r){
+  document.getElementById('examPage').style.display='none';
+  document.getElementById('resultPage').style.display='block';
+  const circle=document.getElementById('scoreCircle');
+  circle.className='score-circle '+(r.passed?'pass':'fail');
+  document.getElementById('scoreNum').textContent=r.score;
+  document.getElementById('scoreDenom').textContent='/'+r.total;
+  document.getElementById('resultVerdict').textContent=r.passed?'恭喜，考试通过！':'很遗憾，未通过';
+  document.getElementById('resultSubtitle').textContent=`及格线 ${r.pass} 分 · 用时 ${r.duration}`;
+  document.getElementById('rs-correct').textContent=r.correctCount;
+  document.getElementById('rs-wrong').textContent=r.wrongCount;
+  document.getElementById('rs-rate').textContent=Math.round(r.correctCount/currentQuestions.length*100)+'%';
+  document.getElementById('rs-time').textContent=r.duration;
+
+  const statusLabel={correct:'<span class="r-status r-correct">答对</span>',wrong:'<span class="r-status r-wrong">答错</span>',partial:'<span class="r-status r-partial">部分正确</span>',unanswered:'<span class="r-status" style="background:#f0f4f8;color:var(--text3)">未作答</span>',manual:'<span class="r-status r-manual">待人工评分</span>'};
+  const typeLabel={single:'单选',multi:'多选',judge:'判断',fill:'填空',essay:'简答'};
+  document.getElementById('reviewList').innerHTML=r.details.map((d,i)=>{
+    let userAnsDisplay='未作答';
+    if(d.userAnswer!==undefined&&d.userAnswer!==''&&d.userAnswer!==null){
+      if(Array.isArray(d.userAnswer))userAnsDisplay=d.userAnswer.join('');
+      else userAnsDisplay=String(d.userAnswer);
+    }
+    return `<div class="review-card">
+      <div class="r-header">
+        <strong style="font-size:13px">${i+1}.</strong>
+        <span style="font-size:11px;padding:2px 6px;background:var(--blue-light);color:var(--blue);border-radius:4px">${typeLabel[d.type]}</span>
+        ${statusLabel[d.status]||''}
+        <span style="font-size:12px;color:var(--text3);margin-left:auto">得 ${d.got} / ${d.max} 分</span>
+      </div>
+      <div class="r-q">${d.content}</div>
+      <div class="r-ans">
+        <div class="my">我的答案：${userAnsDisplay||'未作答'}</div>
+        <div class="std">正确答案：${d.correctAnswer||'-'}</div>
+      </div>
+      ${d.explain?`<div class="r-explain">解析：${d.explain}</div>`:''}
+    </div>`;
+  }).join('');
+  window.scrollTo(0,0);
+}
+
+function backHome(){
+  document.getElementById('resultPage').style.display='none';
+  showHomePage();
+}
+
+// ===================== TOAST =====================
+function showToast(msg,type='success'){
+  const wrap=document.getElementById('toastWrap');
+  const t=document.createElement('div');t.className='toast '+(type==='error'?'error':'');t.textContent=msg;wrap.appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3500);
+}
+</script>
+</body>
+</html>

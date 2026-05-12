@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>后台管理 — 在线考试系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--blue:#185FA5;--blue-light:#E6F1FB;--green:#3B6D11;--green-light:#EAF3DE;--red:#A32D2D;--red-light:#FCEBEB;--amber:#854F0B;--amber-light:#FAEEDA;--text:#1a1a2e;--text2:#555;--text3:#888;--border:#e8edf2;--bg:#f0f4f8;--white:#fff;--radius:12px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+/* Layout */
+.layout{display:flex;min-height:100vh}
+.sidebar{width:220px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh}
+.sidebar-logo{padding:20px 16px;border-bottom:1px solid var(--border)}
+.sidebar-logo h2{font-size:15px;font-weight:500;color:var(--text)}
+.sidebar-logo span{font-size:12px;color:var(--text3)}
+.nav{padding:12px 8px;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s;margin-bottom:2px;user-select:none}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:var(--blue-light);color:var(--blue);font-weight:500}
+.nav-item svg{flex-shrink:0}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text3)}
+.main{flex:1;overflow:auto}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar h1{font-size:15px;font-weight:500}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.avatar{width:32px;height:32px;background:var(--blue-light);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:var(--blue)}
+.content{padding:24px}
+/* Pages */
+.page{display:none}
+.page.active{display:block}
+/* Cards */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);padding:20px}
+.stat-card .label{font-size:12px;color:var(--text3);margin-bottom:8px}
+.stat-card .value{font-size:28px;font-weight:500;color:var(--text)}
+.stat-card .sub{font-size:12px;color:var(--text3);margin-top:4px}
+.panel{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:20px}
+.panel-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.panel-header h3{font-size:14px;font-weight:500}
+.panel-body{padding:20px}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--white);color:var(--text);transition:all .15s;font-family:inherit;white-space:nowrap}
+.btn:hover{border-color:#aaa;background:var(--bg)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:#0C447C;border-color:#0C447C}
+.btn-danger{background:var(--red-light);color:var(--red);border-color:#f7c1c1}
+.btn-danger:hover{background:#f7c1c1}
+.btn-success{background:var(--green-light);color:var(--green);border-color:#c0dd97}
+.btn-success:hover{background:#c0dd97}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:6px}
+/* Table */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;background:#fafafa;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+/* Badge */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-blue{background:var(--blue-light);color:var(--blue)}
+.badge-green{background:var(--green-light);color:var(--green)}
+.badge-red{background:var(--red-light);color:var(--red)}
+.badge-amber{background:var(--amber-light);color:var(--amber)}
+.badge-gray{background:#f1f1f1;color:#666}
+/* Form */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.form-row.full{grid-template-columns:1fr}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group label{font-size:12px;font-weight:500;color:var(--text2)}
+input,select,textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);font-family:inherit;outline:none;background:var(--white);transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+textarea{resize:vertical;min-height:80px}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:16px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-header h3{font-size:15px;font-weight:500}
+.modal-close{background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3);line-height:1;padding:0 4px}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+/* Upload */
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:all .15s;background:#fafafa}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:var(--blue-light)}
+.upload-zone input{display:none}
+.upload-zone .icon{font-size:40px;margin-bottom:12px}
+.upload-zone p{font-size:13px;color:var(--text3)}
+.upload-zone strong{color:var(--blue);cursor:pointer}
+/* Progress */
+.progress-wrap{background:#f0f4f8;border-radius:20px;height:8px;overflow:hidden;margin:8px 0}
+.progress-bar{height:100%;background:var(--blue);border-radius:20px;transition:width .3s}
+/* Tag */
+.tag{display:inline-block;padding:2px 8px;background:#f0f4f8;border-radius:4px;font-size:12px;color:var(--text2);margin:2px}
+/* Question preview */
+.q-item{border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.q-item .q-meta{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.q-item .q-type{font-size:11px;font-weight:500;padding:2px 8px;border-radius:4px;background:var(--blue-light);color:var(--blue)}
+.q-item .q-score{font-size:11px;color:var(--text3)}
+.q-item .q-text{font-size:13px;color:var(--text);line-height:1.6;margin-bottom:8px}
+.q-item .q-options{display:flex;flex-direction:column;gap:4px}
+.q-item .q-option{font-size:12px;color:var(--text2);padding:3px 6px;border-radius:4px}
+.q-item .q-option.correct{background:var(--green-light);color:var(--green);font-weight:500}
+.q-answer{font-size:12px;color:var(--green);margin-top:6px;font-weight:500}
+/* Toast */
+.toast-wrap{position:fixed;top:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--text);color:#fff;padding:12px 16px;border-radius:10px;font-size:13px;opacity:0;transform:translateX(20px);transition:all .3s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+.toast.success{background:#2d7a2d}
+.toast.error{background:var(--red)}
+/* Exam list card */
+.exam-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.exam-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:all .2s}
+.exam-card:hover{border-color:var(--blue)}
+.exam-card h4{font-size:14px;font-weight:500;margin-bottom:8px}
+.exam-card .meta{font-size:12px;color:var(--text3);line-height:1.8}
+.exam-card .actions{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+/* Login */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.login-box{background:var(--white);border-radius:16px;border:1px solid var(--border);padding:40px;width:380px;max-width:95vw}
+.login-box h2{font-size:20px;font-weight:500;margin-bottom:8px;text-align:center}
+.login-box .sub{font-size:13px;color:var(--text3);text-align:center;margin-bottom:28px}
+.login-box .form-group{margin-bottom:16px}
+.login-btn{width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:background .15s}
+.login-btn:hover{background:#0C447C}
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;transition:all .15s;user-select:none}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+.tab-content{display:none}
+.tab-content.active{display:block}
+/* Empty */
+.empty{text-align:center;padding:40px;color:var(--text3);font-size:13px}
+/* Responsive */
+@media(max-width:640px){
+  .form-row{grid-template-columns:1fr}
+  .sidebar{width:64px}
+  .sidebar-logo h2,.sidebar-logo span,.nav-item span{display:none}
+  .nav-item{justify-content:center;padding:12px}
+  .content{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="loginPage" class="login-wrap">
+  <div class="login-box">
+    <h2>后台管理系统</h2>
+    <p class="sub">在线考试系统管理员登录</p>
+    <div class="form-group"><label>用户名</label><input id="loginUser" type="text" placeholder="admin" value="admin"></div>
+    <div class="form-group"><label>密码</label><input id="loginPass" type="password" placeholder="••••••••" value="admin123"></div>
+    <button class="login-btn" onclick="doLogin()">登录</button>
+    <p style="text-align:center;font-size:12px;color:#bbb;margin-top:16px">默认账号 admin / admin123</p>
+  </div>
+</div>
+
+<!-- App -->
+<div id="appPage" class="layout" style="display:none">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h2>考试管理平台</h2>
+      <span id="loginUserName">管理员</span>
+    </div>
+    <div class="nav">
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        <span>控制台</span>
+      </div>
+      <div class="nav-item" onclick="showPage('users')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>用户管理</span>
+      </div>
+      <div class="nav-item" onclick="showPage('import')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span>PDF导入</span>
+      </div>
+      <div class="nav-item" onclick="showPage('questions')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span>题库管理</span>
+      </div>
+      <div class="nav-item" onclick="showPage('papers')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><path d="M9 12h6M9 16h4"/></svg>
+        <span>试卷管理</span>
+      </div>
+      <div class="nav-item" onclick="showPage('records')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <span>成绩统计</span>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <span id="sidebarUser">admin</span> · <a href="#" onclick="doLogout()" style="color:#aaa">退出</a>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <h1 id="pageTitle">控制台</h1>
+      <div class="topbar-right">
+        <a href="exam.html" target="_blank" class="btn btn-sm">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          前台考试
+        </a>
+        <div class="avatar" id="topAvatar">A</div>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- Dashboard -->
+      <div id="page-dashboard" class="page active">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="label">注册用户</div><div class="value" id="stat-users">0</div><div class="sub">已激活用户数</div></div>
+          <div class="stat-card"><div class="label">题库总题数</div><div class="value" id="stat-questions">0</div><div class="sub">各类型题目</div></div>
+          <div class="stat-card"><div class="label">试卷数量</div><div class="value" id="stat-papers">0</div><div class="sub">已发布 / 全部</div></div>
+          <div class="stat-card"><div class="label">考试次数</div><div class="value" id="stat-records">0</div><div class="sub">累计作答记录</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><h3>最近考试记录</h3></div>
+          <div class="panel-body">
+            <div class="table-wrap">
+              <table id="recentTable">
+                <thead><tr><th>考生</th><th>试卷</th><th>得分</th><th>总分</th><th>通过</th><th>时间</th></tr></thead>
+                <tbody id="recentBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users -->
+      <div id="page-users" class="page">
+        <div class="panel">
+          <div class="panel-header">
+            <h3>用户列表</h3>
+            <button class="btn btn-primary btn-sm" onclick="openModal('addUserModal')">+ 添加用户</button>
+          </div>
+          <div class="panel-body">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>ID</th><th>用户名</th><th>姓名</th><th>角色</th><th>状态</th><th>注册时间</th><th>操作</th></tr></thead>
+                <tbody id="userTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Import -->
+      <div id="page-import" class="page">
+        <div class="panel">
+          <div class="panel-header"><h3>PDF 试卷导入</h3></div>
+          <div class="panel-body">
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('pdfFile').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+              <input type="file" id="pdfFile" accept=".pdf,.txt" onchange="handleFileSelect(event)">
+              <div class="icon">📄</div>
+              <p><strong>点击选择文件</strong> 或拖拽到此处</p>
+              <p style="margin-top:6px;font-size:12px">支持 PDF 格式（系统将自动识别题型、选项、答案）</p>
+            </div>
+            <div id="importProgress" style="display:none;margin-top:16px">
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:4px">
+                <span id="importStatusText">正在解析...</span>
+                <span id="importPct">0%</span>
+              </div>
+              <div class="progress-wrap"><div class="progress-bar" id="importProgressBar" style="width:0%"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="parsedPanel" style="display:none">
+          <div class="panel">
+            <div class="panel-header">
+              <h3>解析结果预览</h3>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span id="parsedCount" class="badge badge-blue"></span>
+                <button class="btn btn-primary btn-sm" onclick="importParsedQuestions()">导入到题库</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="tabs">
+                <div class="tab active" onclick="switchTab(this,'tab-single')">单选题</div>
+                <div class="tab" onclick="switchTab(this,'tab-multi')">多选题</div>
+                <div class="tab" onclick="switchTab(this,'tab-judge')">判断题</div>
+                <div class="tab" onclick="switchTab(this,'tab-fill')">填空题</div>
+                <div class="tab" onclick="switchTab(this,'tab-essay')">简答题</div>
+              </div>
+              <div id="tab-single" class="tab-content active"></div>
+              <div id="tab-multi" class="tab-content"></div>
+              <div id="tab-judge" class="tab-content"></div>
+              <div id="tab-fill" class="tab-content"></div>
+              <div id="tab-essay" class="tab-content"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:20px">
+          <div class="panel-header"><h3>手动录入示例格式说明</h3></div>
+          <div class="panel-body">
+            <div style="background:#fafafa;border-radius:8px;padding:16px;font-size:12px;color:var(--text2);line-height:2;font-family:monospace;white-space:pre-wrap">【单选题】
+1. 以下哪个是正确答案？
+A. 选项一
+B. 选项二
+C. 选项三
+D. 选项四
+答案：A
+
+【多选题】
+2. 以下哪些是正确答案？（多选）
+A. 选项一
+B. 选项二
+C. 选项三
+答案：AB
+
+【判断题】
+3. 地球是圆的。
+答案：正确
+
+【填空题】
+4. 中国的首都是___。
+答案：北京
+
+【简答题】
+5. 请简述...
+答案：参考答案内容</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Questions -->
+      <div id="page-questions" class="page">
+        <div class="panel">
+          <div class="panel-header">
+            <h3>题库管理</h3>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <select id="qFilterType" onchange="renderQuestions()" style="width:120px;padding:6px 10px;font-size:12px;border-radius:6px">
+                <option value="">全部类型</option>
+                <option value="single">单选题</option>
+                <option value="multi">多选题</option>
+                <option value="judge">判断题</option>
+                <option value="fill">填空题</option>
+                <option value="essay">简答题</option>
+              </select>
+              <input id="qSearch" type="text" placeholder="搜索题目..." style="width:180px;padding:6px 10px;font-size:12px;border-radius:6px" oninput="renderQuestions()">
+              <button class="btn btn-primary btn-sm" onclick="openAddQuestion()">+ 添加题目</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div id="questionList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Papers -->
+      <div id="page-papers" class="page">
+        <div class="panel">
+          <div class="panel-header">
+            <h3>试卷管理</h3>
+            <button class="btn btn-primary btn-sm" onclick="openModal('addPaperModal')">+ 创建试卷</button>
+          </div>
+          <div class="panel-body">
+            <div id="paperList" class="exam-cards"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Records -->
+      <div id="page-records" class="page">
+        <div class="stats-grid" style="margin-bottom:20px">
+          <div class="stat-card"><div class="label">总考试人次</div><div class="value" id="rec-total">0</div></div>
+          <div class="stat-card"><div class="label">平均分</div><div class="value" id="rec-avg">-</div></div>
+          <div class="stat-card"><div class="label">通过率</div><div class="value" id="rec-pass">-</div></div>
+          <div class="stat-card"><div class="label">最高分</div><div class="value" id="rec-max">-</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><h3>考试记录</h3></div>
+          <div class="panel-body">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>考生</th><th>试卷</th><th>得分</th><th>总分</th><th>正确率</th><th>用时</th><th>通过</th><th>时间</th></tr></thead>
+                <tbody id="recordTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="addUserModal">
+  <div class="modal">
+    <div class="modal-header"><h3>添加用户</h3><button class="modal-close" onclick="closeModal('addUserModal')">×</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>用户名</label><input id="uUsername" type="text" placeholder="登录用户名"></div>
+        <div class="form-group"><label>姓名</label><input id="uName" type="text" placeholder="真实姓名"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>密码</label><input id="uPassword" type="password" placeholder="登录密码"></div>
+        <div class="form-group"><label>角色</label>
+          <select id="uRole"><option value="student">考生</option><option value="admin">管理员</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('addUserModal')">取消</button><button class="btn btn-primary" onclick="addUser()">保存</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addQuestionModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="qModalTitle">添加题目</h3><button class="modal-close" onclick="closeModal('addQuestionModal')">×</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>题目类型</label>
+          <select id="qType" onchange="renderQTypeFields()">
+            <option value="single">单选题</option><option value="multi">多选题</option>
+            <option value="judge">判断题</option><option value="fill">填空题</option><option value="essay">简答题</option>
+          </select>
+        </div>
+        <div class="form-group"><label>分值</label><input id="qScore" type="number" value="2" min="1" max="100"></div>
+      </div>
+      <div class="form-row full">
+        <div class="form-group"><label>题目内容</label><textarea id="qContent" rows="3" placeholder="请输入题目内容..."></textarea></div>
+      </div>
+      <div id="qOptionsArea"></div>
+      <div class="form-row full">
+        <div class="form-group"><label>正确答案</label><input id="qAnswer" type="text" placeholder="答案（单选填A，多选填AB，判断填正确/错误）"></div>
+      </div>
+      <div class="form-row full">
+        <div class="form-group"><label>答案解析（可选）</label><textarea id="qExplain" rows="2" placeholder="解题思路..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('addQuestionModal')">取消</button><button class="btn btn-primary" onclick="saveQuestion()">保存</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addPaperModal">
+  <div class="modal" style="width:620px">
+    <div class="modal-header"><h3 id="paperModalTitle">创建试卷</h3><button class="modal-close" onclick="closeModal('addPaperModal')">×</button></div>
+    <div class="modal-body">
+      <div class="form-row full"><div class="form-group"><label>试卷名称</label><input id="pName" type="text" placeholder="请输入试卷名称"></div></div>
+      <div class="form-row">
+        <div class="form-group"><label>总分</label><input id="pTotal" type="number" value="100" min="1"></div>
+        <div class="form-group"><label>考试时长（分钟）</label><input id="pDuration" type="number" value="60" min="1"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>及格分数</label><input id="pPass" type="number" value="60" min="1"></div>
+        <div class="form-group"><label>状态</label><select id="pStatus"><option value="draft">草稿</option><option value="published">发布</option></select></div>
+      </div>
+      <div class="form-row full"><div class="form-group"><label>试卷说明（可选）</label><textarea id="pDesc" rows="2" placeholder="考试说明、注意事项..."></textarea></div></div>
+      <div style="margin-top:4px">
+        <label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:8px">选题设置</label>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+          <div class="form-group"><label style="font-size:11px">单选题数</label><input id="pSingle" type="number" value="10" min="0"></div>
+          <div class="form-group"><label style="font-size:11px">多选题数</label><input id="pMulti" type="number" value="5" min="0"></div>
+          <div class="form-group"><label style="font-size:11px">判断题数</label><input id="pJudge" type="number" value="5" min="0"></div>
+          <div class="form-group"><label style="font-size:11px">填空题数</label><input id="pFill" type="number" value="3" min="0"></div>
+          <div class="form-group"><label style="font-size:11px">简答题数</label><input id="pEssay" type="number" value="2" min="0"></div>
+        </div>
+        <p style="font-size:11px;color:var(--text3);margin-top:6px">系统将从题库随机抽取指定数量的题目组成试卷</p>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('addPaperModal')">取消</button><button class="btn btn-primary" onclick="savePaper()">保存试卷</button></div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ===================== DB =====================
+const DB = {
+  get(k){try{return JSON.parse(localStorage.getItem('exam_'+k)||'null')}catch{return null}},
+  set(k,v){localStorage.setItem('exam_'+k,JSON.stringify(v))},
+  users(){return this.get('users')||[]},
+  questions(){return this.get('questions')||[]},
+  papers(){return this.get('papers')||[]},
+  records(){return this.get('records')||[]}
+};
+
+// ===================== INIT =====================
+function initData(){
+  if(!DB.get('initialized')){
+    DB.set('users',[
+      {id:'u1',username:'admin',password:'admin123',name:'管理员',role:'admin',status:'active',created:new Date().toLocaleDateString()},
+      {id:'u2',username:'student1',password:'123456',name:'张三',role:'student',status:'active',created:new Date().toLocaleDateString()},
+      {id:'u3',username:'student2',password:'123456',name:'李四',role:'student',status:'active',created:new Date().toLocaleDateString()}
+    ]);
+    DB.set('questions',getSampleQuestions());
+    DB.set('papers',[]);
+    DB.set('records',[]);
+    DB.set('initialized',true);
+  }
+}
+
+function getSampleQuestions(){
+  return [
+    {id:'q1',type:'single',content:'计算机中1字节等于多少位？',options:['A.4位','B.8位','C.16位','D.32位'],answer:'B',score:2,explain:'1字节(Byte)=8位(bit)，这是计算机基础知识。'},
+    {id:'q2',type:'single',content:'HTML是什么的缩写？',options:['A.HyperText Markup Language','B.High Text Machine Language','C.HyperText Machine Language','D.High Transfer Markup Language'],answer:'A',score:2,explain:'HTML全称HyperText Markup Language，超文本标记语言。'},
+    {id:'q3',type:'single',content:'以下哪种排序算法平均时间复杂度最低？',options:['A.冒泡排序','B.选择排序','C.快速排序','D.插入排序'],answer:'C',score:2,explain:'快速排序平均时间复杂度为O(nlogn)，是常用排序中最快的。'},
+    {id:'q4',type:'single',content:'TCP/IP协议中，HTTP默认端口号是？',options:['A.21','B.23','C.80','D.443'],answer:'C',score:2,explain:'HTTP默认端口为80，HTTPS为443。'},
+    {id:'q5',type:'single',content:'以下哪个不是关系型数据库？',options:['A.MySQL','B.Oracle','C.MongoDB','D.PostgreSQL'],answer:'C',score:2,explain:'MongoDB是文档型NoSQL数据库，其余三个都是关系型数据库。'},
+    {id:'q6',type:'multi',content:'以下哪些是面向对象编程的基本特征？（多选）',options:['A.封装','B.继承','C.多态','D.递归'],answer:'ABC',score:4,explain:'面向对象三大特征：封装、继承、多态。递归是编程技术，不是OOP特征。'},
+    {id:'q7',type:'multi',content:'以下哪些是HTTP请求方法？（多选）',options:['A.GET','B.POST','C.PUSH','D.DELETE'],answer:'ABD',score:4,explain:'HTTP标准方法包括GET、POST、PUT、DELETE、PATCH等，PUSH不是HTTP方法。'},
+    {id:'q8',type:'judge',content:'Python是一种编译型语言。',answer:'错误',score:2,explain:'Python是解释型语言，代码在运行时逐行解释执行，而不是预先编译成机器码。'},
+    {id:'q9',type:'judge',content:'JavaScript可以在服务器端运行。',answer:'正确',score:2,explain:'Node.js使JavaScript可以在服务器端运行，是现代全栈开发的重要技术。'},
+    {id:'q10',type:'judge',content:'CSS中class选择器使用#号前缀。',answer:'错误',score:2,explain:'CSS中class选择器使用"."前缀，"#"是ID选择器的前缀。'},
+    {id:'q11',type:'fill',content:'在CSS中，用于设置文字颜色的属性是___。',answer:'color',score:3,explain:'CSS的color属性用于设置元素的文字颜色。'},
+    {id:'q12',type:'fill',content:'JavaScript中声明常量使用关键字___。',answer:'const',score:3,explain:'const用于声明不可重新赋值的常量，ES6引入。'},
+    {id:'q13',type:'essay',content:'请简述什么是RESTful API，并说明其主要设计原则。',answer:'RESTful API是一种基于REST架构风格的API设计规范。主要原则：1)无状态性；2)统一接口；3)资源导向，使用URL表示资源；4)使用HTTP方法表示操作（GET查询、POST创建、PUT更新、DELETE删除）；5)可缓存性。',score:10,explain:'RESTful API是现代Web开发的重要概念，面试中经常考察。'}
+  ];
+}
+
+// ===================== AUTH =====================
+let currentUser = null;
+function doLogin(){
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPass').value;
+  const users=DB.users();
+  const user=users.find(x=>x.username===u&&x.password===p&&x.status==='active');
+  if(!user){showToast('用户名或密码错误','error');return;}
+  if(user.role!=='admin'){showToast('无管理员权限','error');return;}
+  currentUser=user;
+  document.getElementById('loginPage').style.display='none';
+  document.getElementById('appPage').style.display='flex';
+  document.getElementById('loginUserName').textContent=user.name;
+  document.getElementById('sidebarUser').textContent=user.username;
+  document.getElementById('topAvatar').textContent=user.name[0];
+  showPage('dashboard');
+}
+function doLogout(){currentUser=null;document.getElementById('loginPage').style.display='flex';document.getElementById('appPage').style.display='none';}
+document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+// ===================== NAV =====================
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const titles={dashboard:'控制台',users:'用户管理',import:'PDF导入',questions:'题库管理',papers:'试卷管理',records:'成绩统计'};
+  document.getElementById('pageTitle').textContent=titles[name]||name;
+  const idx={dashboard:0,users:1,import:2,questions:3,papers:4,records:5};
+  document.querySelectorAll('.nav-item')[idx[name]]?.classList.add('active');
+  if(name==='dashboard')renderDashboard();
+  if(name==='users')renderUsers();
+  if(name==='questions')renderQuestions();
+  if(name==='papers')renderPapers();
+  if(name==='records')renderRecords();
+}
+
+// ===================== DASHBOARD =====================
+function renderDashboard(){
+  const users=DB.users().filter(u=>u.role==='student');
+  const questions=DB.questions();
+  const papers=DB.papers();
+  const records=DB.records();
+  document.getElementById('stat-users').textContent=users.length;
+  document.getElementById('stat-questions').textContent=questions.length;
+  document.getElementById('stat-papers').textContent=`${papers.filter(p=>p.status==='published').length}/${papers.length}`;
+  document.getElementById('stat-records').textContent=records.length;
+  const tbody=document.getElementById('recentBody');
+  const recent=records.slice(-10).reverse();
+  tbody.innerHTML=recent.length?recent.map(r=>`<tr><td>${r.userName}</td><td>${r.paperName}</td><td><strong>${r.score}</strong></td><td>${r.total}</td><td>${r.passed?'<span class="badge badge-green">通过</span>':'<span class="badge badge-red">未通过</span>'}</td><td style="color:var(--text3);font-size:12px">${r.time}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">暂无考试记录</td></tr>';
+}
+
+// ===================== USERS =====================
+function renderUsers(){
+  const users=DB.users();
+  document.getElementById('userTableBody').innerHTML=users.map(u=>`
+    <tr>
+      <td style="font-size:12px;color:var(--text3)">${u.id}</td>
+      <td><strong>${u.username}</strong></td>
+      <td>${u.name}</td>
+      <td>${u.role==='admin'?'<span class="badge badge-blue">管理员</span>':'<span class="badge badge-gray">考生</span>'}</td>
+      <td>${u.status==='active'?'<span class="badge badge-green">正常</span>':'<span class="badge badge-red">禁用</span>'}</td>
+      <td style="font-size:12px;color:var(--text3)">${u.created}</td>
+      <td>
+        ${u.username!=='admin'?`
+          <button class="btn btn-sm" onclick="toggleUser('${u.id}')">${u.status==='active'?'禁用':'启用'}</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')">删除</button>
+        `:'<span style="color:var(--text3);font-size:12px">超管不可操作</span>'}
+      </td>
+    </tr>`).join('');
+}
+function addUser(){
+  const u=document.getElementById('uUsername').value.trim();
+  const n=document.getElementById('uName').value.trim();
+  const p=document.getElementById('uPassword').value;
+  const r=document.getElementById('uRole').value;
+  if(!u||!n||!p){showToast('请填写完整信息','error');return;}
+  const users=DB.users();
+  if(users.find(x=>x.username===u)){showToast('用户名已存在','error');return;}
+  users.push({id:'u'+Date.now(),username:u,name:n,password:p,role:r,status:'active',created:new Date().toLocaleDateString()});
+  DB.set('users',users);closeModal('addUserModal');renderUsers();showToast('用户添加成功');
+  ['uUsername','uName','uPassword'].forEach(id=>document.getElementById(id).value='');
+}
+function toggleUser(id){const users=DB.users();const u=users.find(x=>x.id===id);if(u){u.status=u.status==='active'?'disabled':'active';DB.set('users',users);renderUsers();showToast('状态已更新');}}
+function deleteUser(id){if(!confirm('确认删除该用户？'))return;DB.set('users',DB.users().filter(u=>u.id!==id));renderUsers();showToast('用户已删除');}
+
+// ===================== PDF IMPORT =====================
+let parsedQuestions=[];
+function onDragOver(e){e.preventDefault();document.getElementById('uploadZone').classList.add('drag');}
+function onDragLeave(){document.getElementById('uploadZone').classList.remove('drag');}
+function onDrop(e){e.preventDefault();document.getElementById('uploadZone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)processFile(f);}
+function handleFileSelect(e){const f=e.target.files[0];if(f)processFile(f);}
+
+function processFile(file){
+  document.getElementById('importProgress').style.display='block';
+  document.getElementById('parsedPanel').style.display='none';
+  parsedQuestions=[];
+  let pct=0;
+  const interval=setInterval(()=>{
+    pct+=Math.random()*15+5;
+    if(pct>95)pct=95;
+    document.getElementById('importProgressBar').style.width=pct+'%';
+    document.getElementById('importPct').textContent=Math.round(pct)+'%';
+  },200);
+
+  const reader=new FileReader();
+  reader.onload=function(e){
+    clearInterval(interval);
+    document.getElementById('importProgressBar').style.width='100%';
+    document.getElementById('importPct').textContent='100%';
+    document.getElementById('importStatusText').textContent='解析完成';
+    const text=e.target.result;
+    parsedQuestions=parseText(text);
+    // If PDF (binary), use demo data
+    if(parsedQuestions.length===0 && file.type==='application/pdf'){
+      parsedQuestions=getDemoParsedQuestions();
+      showToast('PDF二进制已识别，展示示例解析结果（实际部署需接入PDF解析服务）','success');
+    }
+    renderParsedResult();
+  };
+  if(file.type==='application/pdf'){
+    // PDF需服务端解析，这里用演示数据
+    reader.readAsArrayBuffer(file);
+    setTimeout(()=>{
+      clearInterval(interval);
+      document.getElementById('importProgressBar').style.width='100%';
+      document.getElementById('importPct').textContent='100%';
+      document.getElementById('importStatusText').textContent='解析完成';
+      parsedQuestions=getDemoParsedQuestions();
+      renderParsedResult();
+      showToast('PDF已识别，展示模拟解析结果','success');
+    },2000);
+  } else {
+    reader.readAsText(file,'utf-8');
+  }
+}
+
+function parseText(text){
+  const qs=[];
+  // Split by question number
+  const blocks=text.split(/\n(?=\d+[\.、\s])/);
+  let currentType='single';
+  for(const raw of blocks){
+    const block=raw.trim();
+    if(!block)continue;
+    // Detect type hints
+    if(/【单选题】/.test(block))currentType='single';
+    else if(/【多选题】/.test(block))currentType='multi';
+    else if(/【判断题】/.test(block))currentType='judge';
+    else if(/【填空题】/.test(block))currentType='fill';
+    else if(/【简答题】/.test(block))currentType='essay';
+    // Extract question
+    const lines=block.split('\n').map(l=>l.trim()).filter(Boolean);
+    if(lines.length<2)continue;
+    let contentLine=lines[0].replace(/^\d+[\.、\s]+/,'').replace(/【.*?】/g,'').trim();
+    if(!contentLine)contentLine=lines[1]?.replace(/^\d+[\.、\s]+/,'').trim()||'';
+    if(!contentLine)continue;
+    // Options
+    const optLines=lines.filter(l=>/^[A-Ea-e][\.、\s]/.test(l));
+    const options=optLines.map(l=>{const m=l.match(/^([A-Ea-e])[\.、\s](.*)/);return m?m[1].toUpperCase()+'. '+m[2].trim():l;});
+    // Answer
+    let ansLine=lines.find(l=>/^答案[：:]/i.test(l));
+    let answer=ansLine?ansLine.replace(/^答案[：:]\s*/i,'').trim():'';
+    // Explain
+    let explainLine=lines.find(l=>/^(解析|解释|分析)[：:]/i.test(l));
+    let explain=explainLine?explainLine.replace(/^(解析|解释|分析)[：:]\s*/i,'').trim():'';
+    // Auto-detect type
+    let type=currentType;
+    if(options.length>0&&answer.length>1&&/^[A-E]+$/.test(answer))type='multi';
+    else if(options.length>0)type='single';
+    else if(/正确|错误|是|否/.test(answer)&&options.length===0)type='judge';
+    else if(contentLine.includes('___'))type='fill';
+    else if(options.length===0&&answer.length>10)type='essay';
+    qs.push({id:'q'+Date.now()+Math.random().toString(36).slice(2),type,content:contentLine,options,answer,score:type==='essay'?10:type==='multi'?4:2,explain});
+  }
+  return qs;
+}
+
+function getDemoParsedQuestions(){
+  return [
+    {id:'pq1',type:'single',content:'以下哪种数据结构是先进后出（FILO）？',options:['A. 队列','B. 栈','C. 链表','D. 哈希表'],answer:'B',score:2,explain:'栈(Stack)是先进后出的数据结构，类似叠盘子。'},
+    {id:'pq2',type:'single',content:'IPv4地址由几位二进制数组成？',options:['A. 16位','B. 32位','C. 64位','D. 128位'],answer:'B',score:2,explain:'IPv4地址由32位二进制数组成，通常以点分十进制表示。'},
+    {id:'pq3',type:'single',content:'下列哪个关键字用于在JavaScript中定义函数？',options:['A. def','B. func','C. function','D. method'],answer:'C',score:2,explain:'JavaScript使用function关键字定义函数。'},
+    {id:'pq4',type:'multi',content:'以下属于CSS盒模型组成部分的有？（多选）',options:['A. content','B. padding','C. border','D. shadow'],answer:'ABC',score:4,explain:'CSS盒模型由content、padding、border、margin四部分组成，shadow不是盒模型组成部分。'},
+    {id:'pq5',type:'multi',content:'以下哪些是版本控制系统？（多选）',options:['A. Git','B. SVN','C. Docker','D. Mercurial'],answer:'ABD',score:4,explain:'Git、SVN、Mercurial都是版本控制系统，Docker是容器化平台。'},
+    {id:'pq6',type:'judge',content:'JSON是JavaScript Object Notation的缩写。',answer:'正确',score:2,explain:'JSON全称JavaScript Object Notation，是一种轻量级数据交换格式。'},
+    {id:'pq7',type:'judge',content:'TCP是无连接协议，UDP是面向连接协议。',answer:'错误',score:2,explain:'正好相反，TCP是面向连接的可靠协议，UDP是无连接的不可靠协议。'},
+    {id:'pq8',type:'fill',content:'SQL中用于查询数据的关键字是___。',answer:'SELECT',score:3,explain:'SELECT是SQL中最常用的查询关键字。'},
+    {id:'pq9',type:'essay',content:'请说明MVC设计模式的组成部分及各部分的职责。',answer:'MVC(Model-View-Controller)设计模式：1)Model(模型)：负责数据处理和业务逻辑；2)View(视图)：负责数据展示和用户界面；3)Controller(控制器)：负责接收用户输入，协调Model和View。优点：分离关注点，提高可维护性和可测试性。',score:10,explain:'MVC是软件架构中最经典的设计模式之一。'}
+  ];
+}
+
+function renderParsedResult(){
+  document.getElementById('parsedPanel').style.display='block';
+  document.getElementById('parsedCount').textContent=parsedQuestions.length+'道题目';
+  const typeMap={single:'tab-single',multi:'tab-multi',judge:'tab-judge',fill:'tab-fill',essay:'tab-essay'};
+  const typeLabel={single:'单选题',multi:'多选题',judge:'判断题',fill:'填空题',essay:'简答题'};
+  Object.values(typeMap).forEach(id=>document.getElementById(id).innerHTML='');
+  const groups={single:[],multi:[],judge:[],fill:[],essay:[]};
+  parsedQuestions.forEach(q=>{if(groups[q.type])groups[q.type].push(q);});
+  for(const [type,qs] of Object.entries(groups)){
+    const container=document.getElementById(typeMap[type]);
+    if(qs.length===0){container.innerHTML='<div class="empty">暂无'+typeLabel[type]+'</div>';continue;}
+    container.innerHTML=qs.map((q,i)=>`
+      <div class="q-item">
+        <div class="q-meta">
+          <span class="q-type">${typeLabel[q.type]}</span>
+          <span class="q-score">${q.score}分</span>
+        </div>
+        <div class="q-text">${i+1}. ${q.content}</div>
+        ${q.options.length?`<div class="q-options">${q.options.map(o=>`<div class="q-option ${q.answer&&o.startsWith(q.answer.split('').find(c=>o.startsWith(c)))?'correct':''}">${o}</div>`).join('')}</div>`:''}
+        ${q.answer?`<div class="q-answer">答案：${q.answer}</div>`:''}
+        ${q.explain?`<div style="font-size:12px;color:var(--text3);margin-top:4px">解析：${q.explain}</div>`:''}
+      </div>`).join('');
+  }
+}
+
+function importParsedQuestions(){
+  if(!parsedQuestions.length){showToast('没有可导入的题目','error');return;}
+  const questions=DB.questions();
+  questions.push(...parsedQuestions);
+  DB.set('questions',questions);
+  showToast(`成功导入 ${parsedQuestions.length} 道题目`,'success');
+  parsedQuestions=[];
+  document.getElementById('parsedPanel').style.display='none';
+  document.getElementById('importProgress').style.display='none';
+  document.getElementById('pdfFile').value='';
+}
+
+// ===================== QUESTIONS =====================
+let editingQId=null;
+function renderQuestions(){
+  let qs=DB.questions();
+  const type=document.getElementById('qFilterType').value;
+  const search=document.getElementById('qSearch').value.toLowerCase();
+  if(type)qs=qs.filter(q=>q.type===type);
+  if(search)qs=qs.filter(q=>q.content.toLowerCase().includes(search));
+  const typeLabel={single:'单选',multi:'多选',judge:'判断',fill:'填空',essay:'简答'};
+  const badgeClass={single:'badge-blue',multi:'badge-amber',judge:'badge-green',fill:'badge-gray',essay:'badge-red'};
+  document.getElementById('questionList').innerHTML=qs.length?qs.map(q=>`
+    <div class="q-item">
+      <div class="q-meta">
+        <span class="q-type">${typeLabel[q.type]||q.type}</span>
+        <span class="q-score">${q.score}分</span>
+        <span style="flex:1"></span>
+        <button class="btn btn-sm" onclick="editQuestion('${q.id}')">编辑</button>
+        <button class="btn btn-danger btn-sm" style="margin-left:6px" onclick="deleteQuestion('${q.id}')">删除</button>
+      </div>
+      <div class="q-text">${q.content}</div>
+      ${q.options&&q.options.length?`<div class="q-options" style="margin-top:6px">${q.options.map(o=>`<div class="q-option ${q.answer&&q.answer.split('').some(c=>o.startsWith(c))?'correct':''}">${o}</div>`).join('')}</div>`:''}
+      ${q.answer?`<div class="q-answer">答案：${q.answer}</div>`:''}
+    </div>`).join(''):'<div class="empty">暂无题目，请先通过PDF导入或手动添加</div>';
+}
+
+function openAddQuestion(){editingQId=null;document.getElementById('qModalTitle').textContent='添加题目';['qContent','qAnswer','qExplain'].forEach(id=>document.getElementById(id).value='');document.getElementById('qScore').value=2;document.getElementById('qType').value='single';renderQTypeFields();openModal('addQuestionModal');}
+function editQuestion(id){
+  const q=DB.questions().find(x=>x.id===id);if(!q)return;
+  editingQId=id;
+  document.getElementById('qModalTitle').textContent='编辑题目';
+  document.getElementById('qType').value=q.type;
+  document.getElementById('qContent').value=q.content;
+  document.getElementById('qAnswer').value=q.answer||'';
+  document.getElementById('qScore').value=q.score;
+  document.getElementById('qExplain').value=q.explain||'';
+  renderQTypeFields(q.options);
+  openModal('addQuestionModal');
+}
+function renderQTypeFields(existingOptions){
+  const type=document.getElementById('qType').value;
+  const area=document.getElementById('qOptionsArea');
+  if(type==='single'||type==='multi'){
+    const opts=existingOptions||['A. ','B. ','C. ','D. '];
+    area.innerHTML=`<div style="margin-bottom:16px"><label style="font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:8px">选项</label><div id="optionsList">${opts.map((o,i)=>`<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center"><span style="font-size:12px;color:var(--text3);width:16px">${String.fromCharCode(65+i)}.</span><input type="text" value="${o.replace(/^[A-E]\.\s*/,'')}" placeholder="选项内容" style="flex:1"></div>`).join('')}</div><button type="button" class="btn btn-sm" onclick="addOption()" style="font-size:11px">+ 添加选项</button></div>`;
+  } else area.innerHTML='';
+}
+function addOption(){
+  const list=document.getElementById('optionsList');if(!list)return;
+  const count=list.children.length;
+  const d=document.createElement('div');d.style.cssText='display:flex;gap:8px;margin-bottom:8px;align-items:center';
+  d.innerHTML=`<span style="font-size:12px;color:var(--text3);width:16px">${String.fromCharCode(65+count)}.</span><input type="text" placeholder="选项内容" style="flex:1">`;
+  list.appendChild(d);
+}
+function saveQuestion(){
+  const type=document.getElementById('qType').value;
+  const content=document.getElementById('qContent').value.trim();
+  const answer=document.getElementById('qAnswer').value.trim();
+  const score=parseInt(document.getElementById('qScore').value)||2;
+  const explain=document.getElementById('qExplain').value.trim();
+  if(!content){showToast('请输入题目内容','error');return;}
+  if(!answer){showToast('请输入答案','error');return;}
+  let options=[];
+  if(type==='single'||type==='multi'){
+    const inputs=document.querySelectorAll('#optionsList input');
+    inputs.forEach((inp,i)=>{const v=inp.value.trim();if(v)options.push(String.fromCharCode(65+i)+'. '+v);});
+    if(options.length<2){showToast('请至少添加2个选项','error');return;}
+  }
+  const questions=DB.questions();
+  const q={id:editingQId||'q'+Date.now(),type,content,options,answer,score,explain};
+  if(editingQId){const idx=questions.findIndex(x=>x.id===editingQId);if(idx>=0)questions[idx]=q;}
+  else questions.push(q);
+  DB.set('questions',questions);closeModal('addQuestionModal');renderQuestions();showToast(editingQId?'题目已更新':'题目已添加');
+}
+function deleteQuestion(id){if(!confirm('确认删除该题目？'))return;DB.set('questions',DB.questions().filter(q=>q.id!==id));renderQuestions();showToast('题目已删除');}
+
+// ===================== PAPERS =====================
+let editingPaperId=null;
+function renderPapers(){
+  const papers=DB.papers();
+  const statusLabel={draft:'<span class="badge badge-gray">草稿</span>',published:'<span class="badge badge-green">已发布</span>'};
+  document.getElementById('paperList').innerHTML=papers.length?papers.map(p=>`
+    <div class="exam-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <h4>${p.name}</h4>
+        ${statusLabel[p.status]||''}
+      </div>
+      <div class="meta">
+        <div>总分：${p.total}分 · 时长：${p.duration}分钟 · 及格：${p.pass}分</div>
+        <div>题目数：${p.questionIds?.length||0}题</div>
+        <div style="margin-top:4px;color:var(--text3);font-size:11px">${p.desc||''}</div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-sm" onclick="editPaper('${p.id}')">编辑</button>
+        <button class="btn btn-sm ${p.status==='published'?'btn-danger':'btn-success'}" onclick="togglePaper('${p.id}')">${p.status==='published'?'停用':'发布'}</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePaper('${p.id}')">删除</button>
+      </div>
+    </div>`).join(''):'<div class="empty" style="grid-column:1/-1">暂无试卷，点击"创建试卷"开始</div>';
+}
+
+function openAddPaper(){editingPaperId=null;document.getElementById('paperModalTitle').textContent='创建试卷';['pName','pDesc'].forEach(id=>document.getElementById(id).value='');document.getElementById('pTotal').value=100;document.getElementById('pDuration').value=60;document.getElementById('pPass').value=60;document.getElementById('pStatus').value='draft';document.getElementById('pSingle').value=10;document.getElementById('pMulti').value=5;document.getElementById('pJudge').value=5;document.getElementById('pFill').value=3;document.getElementById('pEssay').value=2;}
+function editPaper(id){
+  const p=DB.papers().find(x=>x.id===id);if(!p)return;
+  editingPaperId=id;
+  document.getElementById('paperModalTitle').textContent='编辑试卷';
+  document.getElementById('pName').value=p.name;
+  document.getElementById('pTotal').value=p.total;
+  document.getElementById('pDuration').value=p.duration;
+  document.getElementById('pPass').value=p.pass;
+  document.getElementById('pStatus').value=p.status;
+  document.getElementById('pDesc').value=p.desc||'';
+  openModal('addPaperModal');
+}
+function savePaper(){
+  const name=document.getElementById('pName').value.trim();
+  if(!name){showToast('请输入试卷名称','error');return;}
+  const total=parseInt(document.getElementById('pTotal').value)||100;
+  const duration=parseInt(document.getElementById('pDuration').value)||60;
+  const pass=parseInt(document.getElementById('pPass').value)||60;
+  const status=document.getElementById('pStatus').value;
+  const desc=document.getElementById('pDesc').value.trim();
+  // Select questions
+  const counts={single:parseInt(document.getElementById('pSingle').value)||0,multi:parseInt(document.getElementById('pMulti').value)||0,judge:parseInt(document.getElementById('pJudge').value)||0,fill:parseInt(document.getElementById('pFill').value)||0,essay:parseInt(document.getElementById('pEssay').value)||0};
+  const allQs=DB.questions();
+  let questionIds=[];
+  for(const [type,count] of Object.entries(counts)){
+    const pool=allQs.filter(q=>q.type===type);
+    const shuffled=[...pool].sort(()=>Math.random()-.5);
+    questionIds.push(...shuffled.slice(0,count).map(q=>q.id));
+  }
+  if(questionIds.length===0){showToast('题库中暂无可用题目，请先导入题目','error');return;}
+  const papers=DB.papers();
+  const p={id:editingPaperId||'p'+Date.now(),name,total,duration,pass,status,desc,questionIds,created:new Date().toLocaleDateString()};
+  if(editingPaperId){const idx=papers.findIndex(x=>x.id===editingPaperId);if(idx>=0)papers[idx]=p;}
+  else papers.push(p);
+  DB.set('papers',papers);closeModal('addPaperModal');renderPapers();showToast(editingPaperId?'试卷已更新':(`试卷已创建，包含${questionIds.length}道题目`));
+}
+function togglePaper(id){const papers=DB.papers();const p=papers.find(x=>x.id===id);if(p){p.status=p.status==='published'?'draft':'published';DB.set('papers',papers);renderPapers();showToast(p.status==='published'?'试卷已发布':'试卷已停用');}}
+function deletePaper(id){if(!confirm('确认删除该试卷？'))return;DB.set('papers',DB.papers().filter(p=>p.id!==id));renderPapers();showToast('试卷已删除');}
+
+// ===================== RECORDS =====================
+function renderRecords(){
+  const records=DB.records();
+  document.getElementById('rec-total').textContent=records.length;
+  if(records.length){
+    const scores=records.map(r=>r.score);
+    const passRecords=records.filter(r=>r.passed);
+    document.getElementById('rec-avg').textContent=Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+    document.getElementById('rec-pass').textContent=Math.round(passRecords.length/records.length*100)+'%';
+    document.getElementById('rec-max').textContent=Math.max(...scores);
+  }
+  document.getElementById('recordTableBody').innerHTML=records.length?records.slice().reverse().map(r=>`
+    <tr>
+      <td>${r.userName}</td><td>${r.paperName}</td>
+      <td><strong>${r.score}</strong></td><td>${r.total}</td>
+      <td>${Math.round(r.score/r.total*100)}%</td>
+      <td style="font-size:12px;color:var(--text3)">${r.duration||'-'}</td>
+      <td>${r.passed?'<span class="badge badge-green">通过</span>':'<span class="badge badge-red">未通过</span>'}</td>
+      <td style="font-size:12px;color:var(--text3)">${r.time}</td>
+    </tr>`).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px">暂无记录</td></tr>';
+}
+
+// ===================== MODALS =====================
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(overlay=>{overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open');});});
+
+// ===================== TABS =====================
+function switchTab(el,target){
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  el.closest('.panel-body').querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById(target).classList.add('active');
+}
+
+// ===================== TOAST =====================
+function showToast(msg,type='success'){
+  const wrap=document.getElementById('toastWrap');
+  const t=document.createElement('div');
+  t.className='toast '+type;t.textContent=msg;wrap.appendChild(t);
+  requestAnimationFrame(()=>{requestAnimationFrame(()=>{t.classList.add('show');});});
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},3000);
+}
+
+// ===================== PAPER MODAL OPEN =====================
+document.querySelector('[onclick="openModal(\'addPaperModal\')"]').setAttribute('onclick','openAddPaper();openModal("addPaperModal")');
+
+// ===================== START =====================
+initData();
+</script>
+</body>
+</html>

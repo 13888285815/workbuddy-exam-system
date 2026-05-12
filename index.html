@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>在线考试系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4f8;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.wrap{text-align:center;padding:40px 20px}
+.logo{width:72px;height:72px;background:#185FA5;border-radius:20px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:24px}
+.logo svg{width:40px;height:40px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+h1{font-size:28px;font-weight:500;color:#1a1a2e;margin-bottom:8px}
+p{color:#666;font-size:15px;margin-bottom:48px}
+.cards{display:flex;gap:24px;justify-content:center;flex-wrap:wrap}
+.card{background:#fff;border-radius:16px;border:1px solid #e8edf2;padding:32px 40px;width:260px;cursor:pointer;transition:all .2s;text-decoration:none;display:block}
+.card:hover{border-color:#185FA5;transform:translateY(-4px);box-shadow:0 8px 24px rgba(24,95,165,.12)}
+.card-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+.card-icon.admin{background:#EAF3DE}
+.card-icon.exam{background:#FAEEDA}
+.card h2{font-size:18px;font-weight:500;margin-bottom:8px;color:#1a1a2e}
+.card p{font-size:13px;color:#888;margin:0;line-height:1.6}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;margin-top:12px}
+.badge.admin{background:#EAF3DE;color:#3B6D11}
+.badge.exam{background:#FAEEDA;color:#854F0B}
+footer{margin-top:48px;font-size:12px;color:#bbb}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">
+    <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><path d="M9 12h6M9 16h4"/></svg>
+  </div>
+  <h1>在线考试系统</h1>
+  <p>支持 PDF 试卷导入，自动解析题目，在线作答实时评分</p>
+  <div class="cards">
+    <a class="card" href="admin.html">
+      <div class="card-icon admin">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+          <path d="M18 14l2 2 4-4"/>
+        </svg>
+      </div>
+      <h2>后台管理</h2>
+      <p>用户管理、PDF导入、题库维护、试卷组卷、成绩统计</p>
+      <span class="badge admin">管理员入口</span>
+    </a>
+    <a class="card" href="exam.html">
+      <div class="card-icon exam">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <path d="M9 13l2 2 4-4"/>
+        </svg>
+      </div>
+      <h2>在线考试</h2>
+      <p>选择试卷、限时作答、提交自动评分、查看成绩解析</p>
+      <span class="badge exam">考生入口</span>
+    </a>
+  </div>
+  <footer>默认管理员账号：admin / admin123</footer>
+</div>
+</body>
+</html>
