@@ -1883,7 +1883,6 @@ function saveQuestion(){
   else questions.push(q);
   DB.set('questions',questions);closeModal('addQuestionModal');renderQuestions();showToast(editingQId?'题目已更新':'题目已添加');
 }
-function deleteQuestion(id){if(!confirm('确认删除该题目？'))return;DB.set('questions',DB.questions().filter(q=>q.id!==id));renderQuestions();showToast('题目已删除');}
 
 // ===================== PAPERS =====================
 let editingPaperId=null;
