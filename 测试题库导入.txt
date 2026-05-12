@@ -1,0 +1,84 @@
+【单选题】
+1. 计算机中1字节等于多少位？
+A. 4位
+B. 8位
+C. 16位
+D. 32位
+答案：B
+解析：1字节(Byte)=8位(bit)，这是计算机基础知识。
+
+2. HTML是什么的缩写？
+A. HyperText Markup Language
+B. High Text Machine Language
+C. HyperText Machine Language
+D. High Transfer Markup Language
+答案：A
+解析：HTML全称HyperText Markup Language，超文本标记语言。
+
+3. 以下哪种排序算法平均时间复杂度最低？
+A. 冒泡排序
+B. 选择排序
+C. 快速排序
+D. 插入排序
+答案：C
+解析：快速排序平均时间复杂度为O(nlogn)，是常用排序中最快的。
+
+4. TCP/IP协议中，HTTP默认端口号是？
+A. 21
+B. 23
+C. 80
+D. 443
+答案：C
+解析：HTTP默认端口为80，HTTPS为443。
+
+5. 以下哪个不是关系型数据库？
+A. MySQL
+B. Oracle
+C. MongoDB
+D. PostgreSQL
+答案：C
+解析：MongoDB是文档型NoSQL数据库，其余三个都是关系型数据库。
+
+【多选题】
+6. 以下哪些是面向对象编程的基本特征？（多选）
+A. 封装
+B. 继承
+C. 多态
+D. 递归
+答案：ABC
+解析：面向对象三大特征：封装、继承、多态。递归是编程技术，不是OOP特征。
+
+7. 以下哪些是HTTP请求方法？（多选）
+A. GET
+B. POST
+C. PUSH
+D. DELETE
+答案：ABD
+解析：HTTP标准方法包括GET、POST、PUT、DELETE、PATCH等，PUSH不是HTTP方法。
+
+【判断题】
+8. Python是一种编译型语言。
+答案：错误
+解析：Python是解释型语言，代码在运行时逐行解释执行，而不是预先编译成机器码。
+
+9. JavaScript可以在服务器端运行。
+答案：正确
+解析：Node.js使JavaScript可以在服务器端运行，是现代全栈开发的重要技术。
+
+10. CSS中class选择器使用#号前缀。
+答案：错误
+解析：CSS中class选择器使用"."前缀，"#"是ID选择器的前缀。
+
+【填空题】
+11. 在CSS中，用于设置文字颜色的属性是___。
+答案：color
+解析：CSS的color属性用于设置元素的文字颜色。
+
+12. JavaScript中声明常量使用关键字___。
+答案：const
+解析：const用于声明不可重新赋值的常量，ES6引入。
+
+【简答题】
+13. 请简述什么是RESTful API，并说明其主要设计原则。
+答案：RESTful API是一种基于REST架构风格的API设计规范。主要原则：1)无状态性；2)统一接口；3)资源导向，使用URL表示资源；4)使用HTTP方法表示操作（GET查询、POST创建、PUT更新、DELETE删除）；5)可缓存性。
+解析：RESTful API是现代Web开发的重要概念，面试中经常考察。
