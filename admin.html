@@ -870,29 +870,27 @@ function doLogin(){
   const u=document.getElementById('loginUser').value.trim();
   const p=document.getElementById('loginPass').value;
   
-  // 清除可能损坏的数据，确保干净初始化
-  localStorage.removeItem('exam_users');
-  localStorage.removeItem('exam_questions');
-  localStorage.removeItem('exam_initialized');
+  // 清除所有可能损坏的exam_相关数据，确保干净初始化
+  Object.keys(localStorage).forEach(key => {
+    if(key.startsWith('exam_')) {
+      localStorage.removeItem(key);
+    }
+  });
   
-  // 强制初始化
+  // 强制初始化（每次都重新初始化，确保数据干净）
   initData();
   
-  // 获取用户数据
-  let users = DB.users();
+  // 直接使用默认用户验证，不再从localStorage读取
+  const defaultUsers = [
+    {id:'u1',username:'admin',password:'admin123',name:'管理员',role:'admin',status:'active',created:new Date().toLocaleDateString()},
+    {id:'u2',username:'student1',password:'123456',name:'张三',role:'student',status:'active',created:new Date().toLocaleDateString()}
+  ];
   
-  // 确保有用户数据
-  if(!users || users.length === 0){
-    const defaultUsers = [
-      {id:'u1',username:'admin',password:'admin123',name:'管理员',role:'admin',status:'active',created:new Date().toLocaleDateString()},
-      {id:'u2',username:'student1',password:'123456',name:'张三',role:'student',status:'active',created:new Date().toLocaleDateString()}
-    ];
-    DB.set('users', defaultUsers);
-    users = defaultUsers;
-  }
+  // 保存默认用户
+  DB.set('users', defaultUsers);
   
-  // 查找用户
-  const user = users.find(x => x.username === u && x.password === p && x.status === 'active');
+  // 直接在默认用户中查找匹配
+  const user = defaultUsers.find(x => x.username === u && x.password === p && x.status === 'active');
   
   if(!user){
     showToast('用户名或密码错误','error');
