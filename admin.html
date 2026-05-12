@@ -338,6 +338,8 @@ textarea{resize:vertical;min-height:80px}
                   <input type="checkbox" id="selectAllQs" onchange="toggleSelectAll()" checked style="width:16px;height:16px"> 全选
                 </label>
                 <span style="color:var(--text3)">|</span>
+                <button class="btn btn-sm" onclick="autoFixQuestions()" style="background:var(--amber);color:white">🔧 AI智能修复</button>
+                <button class="btn btn-sm" onclick="batchDeleteRejected()" style="background:var(--red);color:white">🗑️ 删除问题题目</button>
                 <button class="btn btn-sm" onclick="removeSelectedQuestions()" id="btnRemoveSelected" style="display:none">移除选中 (0)</button>
                 <button class="btn btn-sm btn-danger" onclick="discardImport()" id="btnDiscardImport">放弃导入</button>
               </div>
@@ -1086,6 +1088,88 @@ function analyzeQuestionsLocally(text){
   };
 }
 
+// AI智能修复题目
+function autoFixQuestions(){
+  if(!parsedQuestions||parsedQuestions.length===0){
+    showToast('请先导入文件','warning');
+    return;
+  }
+  
+  let fixedCount=0;
+  const garblePattern=/[\u0000-\u001F\u0080-\u009F]{3,}|[\uAC00-\uD7AF]{10,}(?![\uAC00-\uD7AF])|[�]{2,}|\?\?\?|###|░{3,}|----+|____+/g;
+  
+  parsedQuestions.forEach(q=>{
+    // 1. 修复乱码内容
+    if(q.content&&garblePattern.test(q.content)){
+      q.content=q.content.replace(garblePattern,'...').trim();
+      if(q.content.length<5)q.content='【题目内容已修复】';
+      fixedCount++;
+    }
+    
+    // 2. 修复空答案 - 根据题目内容推断
+    if(!q.answer||q.answer.trim().length<1){
+      if(q.type==='judge'){
+        q.answer='正确';
+      } else if(q.type==='single'||q.type==='multi'){
+        // 选择题尝试找最可能的答案
+        if(q.options&&q.options.length>0){
+          q.answer='A';
+        }
+      } else if(q.type==='fill'){
+        q.answer='【待填写】';
+      } else {
+        q.answer='【待确认】';
+      }
+      fixedCount++;
+    }
+    
+    // 3. 修复选择题空选项
+    if((q.type==='single'||q.type==='multi')&&(!q.options||q.options.length<2)){
+      q.options=['A. 选项一','B. 选项二','C. 选项三','D. 选项四'];
+      q.answer=''; // 清空答案，需要用户重新选择
+      fixedCount++;
+    }
+    
+    // 4. 清理多余空白字符
+    if(q.content){
+      q.content=q.content.replace(/\s+/g,' ').trim();
+    }
+    if(q.answer){
+      q.answer=q.answer.replace(/\s+/g,' ').trim();
+    }
+    if(q.options){
+      q.options=q.options.map(o=>o.replace(/\s+/g,' ').trim()).filter(o=>o.length>0);
+    }
+  });
+  
+  showToast(`已自动修复 ${fixedCount} 处问题，请检查并手动修正答案`,'');
+  renderParsedQuestions(); // 刷新预览
+}
+
+// 批量删除有问题的题目
+function batchDeleteRejected(){
+  if(!parsedQuestions||parsedQuestions.length===0)return;
+  
+  const garblePattern=/[\u0000-\u001F\u0080-\u009F]{3,}|[\uAC00-\uD7AF]{10,}(?![\uAC00-\uD7AF])|[�]{2,}|\?\?\?|###|░{3,}/;
+  
+  const beforeCount=parsedQuestions.length;
+  const kept=parsedQuestions.filter(q=>{
+    // 保留：内容正常、有答案、选择题有选项
+    if(garblePattern.test(q.content||''))return false;
+    if(!q.content||q.content.trim().length<5)return false;
+    if(!q.answer||q.answer.trim().length<1)return false;
+    if((q.type==='single'||q.type==='multi')&&(!q.options||q.options.length<2))return false;
+    return true;
+  });
+  
+  const removedCount=beforeCount-kept.length;
+  parsedQuestions=kept;
+  
+  showToast(`已删除 ${removedCount} 道问题题目，保留 ${kept.length} 道`,'');
+  renderParsedQuestions();
+  document.getElementById('parsedCount').textContent='共 '+parsedQuestions.length+' 道题';
+}
+
 // 字符串相似度计算
 function similarity(s1,s2){
   if(!s1||!s2)return 0;
@@ -1744,9 +1828,10 @@ function renderParsedQuestions(){
         <div style="display:flex;align-items:flex-start;gap:10px">
           <input type="checkbox" class="q-select-cb" data-id="${q.id}" checked style="width:18px;height:18px;margin-top:2px;flex-shrink:0;cursor:pointer" onclick="updateSelectedCount()">
           <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
               <span style="background:${typeColors[type]};color:white;padding:2px 8px;border-radius:4px;font-size:11px">${typeMap[type]}</span>
               <span style="color:var(--text3);font-size:12px">第 ${i+1} 题</span>
+              <button onclick="openEditQuestion('${q.id}')" style="margin-left:auto;background:var(--blue);color:white;border:none;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">✏️ 编辑</button>
             </div>
             <div style="font-size:13px;line-height:1.6;word-break:break-word">${escapeHtml(q.content)||'【内容为空】'}</div>
             ${optsStr}
@@ -2038,6 +2123,26 @@ function deleteQuestion(id){
   showToast('已移到回收站，可在回收站恢复','success');
 }
 
+// 编辑导入预览中的题目
+function openEditQuestion(id){
+  const q=parsedQuestions.find(x=>x.id===id);
+  if(!q){
+    showToast('题目不存在','error');
+    return;
+  }
+  // 保存当前编辑的题目ID和来源
+  window.editingParsedId=id;
+  window.editingParsedSource='import';
+  document.getElementById('qModalTitle').textContent='编辑题目';
+  document.getElementById('qType').value=q.type;
+  document.getElementById('qContent').value=q.content||'';
+  document.getElementById('qAnswer').value=q.answer||'';
+  document.getElementById('qScore').value=q.score||2;
+  document.getElementById('qExplain').value=q.explain||'';
+  renderQTypeFields(q.options);
+  openModal('addQuestionModal');
+}
+
 function openAddQuestion(){editingQId=null;document.getElementById('qModalTitle').textContent='添加题目';['qContent','qAnswer','qExplain'].forEach(id=>document.getElementById(id).value='');document.getElementById('qScore').value=2;document.getElementById('qType').value='single';renderQTypeFields();openModal('addQuestionModal');}
 function editQuestion(id){
   const q=DB.questions().find(x=>x.id===id);if(!q)return;
@@ -2080,8 +2185,24 @@ function saveQuestion(){
     inputs.forEach((inp,i)=>{const v=inp.value.trim();if(v)options.push(String.fromCharCode(65+i)+'. '+v);});
     if(options.length<2){showToast('请至少添加2个选项','error');return;}
   }
-  const questions=DB.questions();
   const q={id:editingQId||'q'+Date.now(),type,content,options,answer,score,explain};
+  
+  // 如果是编辑导入预览中的题目
+  if(window.editingParsedId&&window.editingParsedSource==='import'){
+    const idx=parsedQuestions.findIndex(x=>x.id===window.editingParsedId);
+    if(idx>=0){
+      parsedQuestions[idx]={...parsedQuestions[idx],...q};
+      showToast('题目已修改','');
+    }
+    window.editingParsedId=null;
+    window.editingParsedSource=null;
+    renderParsedQuestions(); // 刷新预览
+    closeModal('addQuestionModal');
+    return;
+  }
+  
+  // 保存到题库
+  const questions=DB.questions();
   if(editingQId){const idx=questions.findIndex(x=>x.id===editingQId);if(idx>=0)questions[idx]=q;}
   else questions.push(q);
   DB.set('questions',questions);closeModal('addQuestionModal');renderQuestions();showToast(editingQId?'题目已更新':'题目已添加');
