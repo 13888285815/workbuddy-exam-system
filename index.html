@@ -737,16 +737,21 @@ function startExam(paperId){
 
 function renderQuestions(){
   const typeLabel={single:'单选题',multi:'多选题',judge:'判断题',fill:'填空题',essay:'简答题'};
-  $('examQuestions').innerHTML=currentQuestions.map((q,i)=>`
-    <div class="q-card" id="qcard-${i}">
-      <div class="q-header">
-        <div class="q-num ${isAnswered(q)?'answered':''}" id="qnum-${i}">${i+1}</div>
-        <span class="q-type-tag">${typeLabel[q.type]}</span>
-        <span class="q-score">${q.score}分</span>
-      </div>
-      <div class="q-text">${q.content}</div>
-      ${renderInput(q,i)}
-    </div>`).join('');
+  var html='';
+  for(var i=0;i<currentQuestions.length;i++){
+    var q=currentQuestions[i];
+    var answeredClass=isAnswered(q)?'answered':'';
+    html+='<div class="q-card" id="qcard-'+i+'">';
+    html+='<div class="q-header">';
+    html+='<div class="q-num '+answeredClass+'" id="qnum-'+i+'">'+(i+1)+'</div>';
+    html+='<span class="q-type-tag">'+typeLabel[q.type]+'</span>';
+    html+='<span class="q-score">'+q.score+'分</span>';
+    html+='</div>';
+    html+='<div class="q-text">'+q.content+'</div>';
+    html+=renderInput(q,i);
+    html+='</div>';
+  }
+  $('examQuestions').innerHTML=html;
   renderDots();
   updateProgress();
 }
