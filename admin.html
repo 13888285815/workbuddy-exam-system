@@ -876,15 +876,10 @@ function doLogin(){
   const u=document.getElementById('loginUser').value.trim();
   const p=document.getElementById('loginPass').value;
   
-  // 清除所有可能损坏的exam_相关数据，确保干净初始化
-  Object.keys(localStorage).forEach(key => {
-    if(key.startsWith('exam_')) {
-      localStorage.removeItem(key);
-    }
-  });
-  
-  // 强制初始化（每次都重新初始化，确保数据干净）
-  initData();
+  // 仅在无用户数据时初始化，避免覆盖已有数据
+  if(!DB.get('users')) {
+    initData();
+  }
   
   // 直接使用默认用户验证，不再从localStorage读取
   const defaultUsers = [
@@ -926,9 +921,9 @@ function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  const titles={dashboard:'控制台',users:'用户管理',import:'PDF导入',questions:'题库管理',papers:'试卷管理',records:'成绩统计',trash:'回收站',cleanup:'数据清理'};
+  const titles={dashboard:'控制台',users:'用户管理',import:'PDF导入',questions:'题库管理',papers:'试卷管理',records:'成绩统计',trash:'回收站',cleanup:'数据清理',categories:'分类管理'};
   document.getElementById('pageTitle').textContent=titles[name]||name;
-  const idx={dashboard:0,users:1,import:2,questions:3,papers:4,records:5,trash:6,cleanup:7};
+  const idx={dashboard:0,users:1,import:2,questions:3,papers:4,records:5,trash:6,cleanup:7,categories:8};
   document.querySelectorAll('.nav-item')[idx[name]]?.classList.add('active');
   if(name==='dashboard')renderDashboard();
   if(name==='users')renderUsers();
@@ -941,6 +936,7 @@ function showPage(name){
   if(name==='records')renderRecords();
   if(name==='trash')renderTrash();
   if(name==='cleanup')renderCleanup();
+  if(name==='categories')loadCategories();
 }
 
 // 初始化学科筛选下拉框
@@ -1614,6 +1610,7 @@ function onDrop(e){
 function handleFileSelect(e){
   const f=e.target.files[0];
   if(f)processFileWithOCRAndAI(f);
+}
 
 // 解析Excel文件
 function parseExcelFile(file,callback,interval){
@@ -2274,7 +2271,7 @@ function openEditQuestion(id){
   openModal('addQuestionModal');
 }
 
-function openAddQuestion(){editingQId=null;document.getElementById('qModalTitle').textContent='添加题目';['qContent','qAnswer','qExplain'].forEach(id=>document.getElementById(id).value='');document.getElementById('qScore').value=2;document.getElementById('qType').value='single';updateCategoryDropdowns();const subjectCategories=JSON.parse(localStorage.getItem('subjectCategories')||'[]');document.getElementById('qSubject').value=subjectCategories[0]||'';renderQTypeFields();openModal('addQuestionModal');}
+function openAddQuestion(){editingQId=null;document.getElementById('qModalTitle').textContent='添加题目';['qContent','qAnswer','qExplain'].forEach(id=>document.getElementById(id).value='');document.getElementById('qScore').value=2;document.getElementById('qType').value='single';updateCategoryDropdowns();document.getElementById('qSubject').value=SUBJECTS[0]?SUBJECTS[0].value:'';renderQTypeFields();openModal('addQuestionModal');}
 function editQuestion(id){
   const q=DB.questions().find(x=>x.id===id);if(!q)return;
   editingQId=id;
@@ -2738,6 +2735,7 @@ function confirmImportPaper(){
       options:q.options||[],
       answer:q.answer||'',
       score:q.type==='essay'?10:q.type==='multi'?4:2,
+      subject:q.subject||SUBJECTS[0]?.value||'info',
       explain:''
     };
   });
@@ -2751,7 +2749,7 @@ function confirmImportPaper(){
   // 创建试卷
   const paperId='p'+Date.now();
   const questionIds=newQuestions.map(q=>q.id);
-  const paper={id:paperId,name:paperName+'（导入）',total:questionIds.length*2,duration:60,pass:60,status:'draft',desc:'从文件 '+paperImportData.fileName+' 导入',questionIds,created:new Date().toLocaleDateString()};
+  const paper={id:paperId,name:paperName+'（导入）',subject:SUBJECTS[0]?.value||'info',examType:EXAM_TYPES[0]?.value||'monthly',total:questionIds.length*2,duration:60,pass:60,status:'draft',desc:'从文件 '+paperImportData.fileName+' 导入',questionIds,created:new Date().toLocaleDateString()};
   const papers=DB.papers();
   papers.push(paper);
   DB.set('papers',papers);
@@ -2815,12 +2813,12 @@ function showPwdConfirm(type,target,msg){
   pwdConfirmTarget=target;
   document.getElementById('pwdConfirmMsg').textContent=msg||'请输入管理员密码确认操作';
   document.getElementById('pwdConfirmInput').value='';
-  document.getElementById('pwdConfirmModal').classList.add('show');
+  document.getElementById('pwdConfirmModal').classList.add('open');
   document.getElementById('pwdConfirmInput').focus();
 }
 
 function closePwdConfirm(){
-  document.getElementById('pwdConfirmModal').classList.remove('show');
+  document.getElementById('pwdConfirmModal').classList.remove('open');
   pwdConfirmCallback=null;
   pwdConfirmType=null;
   pwdConfirmTarget=null;
@@ -3345,22 +3343,16 @@ function addSubjectCategory() {
 }
 
 function deleteSubjectCategory(index) {
-  const subjectCategories = JSON.parse(localStorage.getItem('subjectCategories')) || [];
-  
-  if (index >= 0 && index < subjectCategories.length) {
-    const deleted = subjectCategories.splice(index, 1);
-    localStorage.setItem('subjectCategories', JSON.stringify(subjectCategories));
+  if (index >= 0 && index < SUBJECTS.length) {
+    const deleted = SUBJECTS.splice(index, 1)[0];
     
-    // Also update SUBJECTS array
-    const deletedLabel = deleted[0];
-    const subIndex = SUBJECTS.findIndex(s => s.label === deletedLabel);
-    if (subIndex !== -1) {
-      SUBJECTS.splice(subIndex, 1);
-    }
+    // Sync to localStorage
+    const subjectCategories = SUBJECTS.map(s => s.label);
+    localStorage.setItem('subjectCategories', JSON.stringify(subjectCategories));
     
     loadCategories();
     updateCategoryDropdowns();
-    showToast('已删除学科: ' + deleted[0], 'success');
+    showToast('已删除学科: ' + deleted.label, 'success');
   }
 }
 
@@ -3398,22 +3390,16 @@ function addExamCategory() {
 }
 
 function deleteExamCategory(index) {
-  const examCategories = JSON.parse(localStorage.getItem('examCategories')) || [];
-  
-  if (index >= 0 && index < examCategories.length) {
-    const deleted = examCategories.splice(index, 1);
-    localStorage.setItem('examCategories', JSON.stringify(examCategories));
+  if (index >= 0 && index < EXAM_TYPES.length) {
+    const deleted = EXAM_TYPES.splice(index, 1)[0];
     
-    // Also update EXAM_TYPES array
-    const deletedLabel = deleted[0];
-    const examIndex = EXAM_TYPES.findIndex(e => e.label === deletedLabel);
-    if (examIndex !== -1) {
-      EXAM_TYPES.splice(examIndex, 1);
-    }
+    // Sync to localStorage
+    const examCategories = EXAM_TYPES.map(e => e.label);
+    localStorage.setItem('examCategories', JSON.stringify(examCategories));
     
     loadCategories();
     updateCategoryDropdowns();
-    showToast('已删除考试类型: ' + deleted[0], 'success');
+    showToast('已删除考试类型: ' + deleted.label, 'success');
   }
 }
 

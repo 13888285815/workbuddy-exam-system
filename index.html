@@ -743,7 +743,6 @@ function startExam(paperId){
       <span><svg viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>总分 ${paper.total} 分</span>
     </div>`;
   
-  $('total').textContent=qs.length;
   renderQuestions();
   startTimer();
   
@@ -955,13 +954,23 @@ function submitExam(){
       if(ua&&ua===q.answer){status='correct';got=q.score;correct++;}
       else if(ua){status='wrong';wrong++;saveToWrongs(q,ua);}
     } else if(q.type==='multi'){
-      const uaStr=(Array.isArray(ua)?ua.join(''):ua||'').toUpperCase().split('').sort().join('');
+      const uaArr=(Array.isArray(ua)?ua:ua?ua.split(''):[]);
+      const uaStr=uaArr.map(c=>c.toUpperCase()).sort().join('');
       const saStr=q.answer.toUpperCase().split('').sort().join('');
-      if(uaStr===saStr){status='correct';got=q.score;correct++;}
-      else if(ua&&ua.length>0){
+      if(!uaArr.length){status='unanswered';}
+      else if(uaStr===saStr){status='correct';got=q.score;correct++;}
+      else {
         const hit=saStr.split('').filter(c=>uaStr.includes(c)).length;
-        got=Math.floor(q.score*hit/saStr.length);
+        const extra=uaStr.split('').filter(c=>!saStr.includes(c)).length;
+        if(extra>0){
+          // 多选了错误选项：得分=正确数/(正确数+错误数)*满分
+          got=Math.floor(q.score*hit/(hit+extra));
+        } else {
+          // 少选但没多选：按比例得分
+          got=Math.floor(q.score*hit/saStr.length);
+        }
         if(hit>0&&hit<saStr.length){status='partial';partial++;saveToWrongs(q,ua);}
+        else if(hit===saStr.length&&extra>0){status='wrong';wrong++;saveToWrongs(q,ua);}
         else{status='wrong';wrong++;saveToWrongs(q,ua);}
       }
     } else if(q.type==='fill'){
