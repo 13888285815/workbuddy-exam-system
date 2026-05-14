@@ -261,9 +261,7 @@ textarea.fill-input{resize:vertical;min-height:120px}
 .confirm-btns .confirm.danger{background:var(--red)}
 .confirm-btns .confirm.danger:hover{background:#8b1a1a}
 
-/* 无尽模式和错题库样式 */
-.endless-card{border:2px solid #667eea;background:linear-gradient(135deg,rgba(102,126,234,0.05),rgba(118,75,162,0.05))}
-.endless-card h3{color:#667eea}
+/* 错题库样式 */
 .wrong-card{border:2px solid #f5576c;background:linear-gradient(135deg,rgba(245,87,108,0.05),rgba(240,147,251,0.05))}
 .wrong-card h3{color:#f5576c}
 
@@ -627,20 +625,7 @@ function renderPapers(){
     </div>`;
   }).join('');
   
-  // 添加无尽模式和错题库卡片
-  if(allQs.length>0){
-    papersHtml+=`<div class="paper-card endless-card">
-      <h3>无尽模式</h3>
-      <div class="paper-meta">
-        <div><svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/></svg>题库共 ${allQs.length} 道题目</div>
-        <div><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>默认 60 分钟</div>
-        <div><svg viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>答完所有题目为止</div>
-      </div>
-      <p style="font-size:12px;color:var(--text3);margin:8px 0">挑战全题库！一直作答直到题库刷完，中途退出自动保存并评分</p>
-      <button class="start-btn" style="background:linear-gradient(135deg,#667eea,#764ba2)" onclick="startEndless()">开始挑战</button>
-    </div>`;
-  }
-  
+  // 添加错题库卡片
   if(wrongs.length>0){
     papersHtml+=`<div class="paper-card wrong-card">
       <h3>错题库</h3>
@@ -769,7 +754,7 @@ function renderQuestions(){
 function renderInput(q,i){
   const answered=isAnswered(q);
   const marked=reviewMarks.has(q.id);
-  const isSpecialMode=isEndlessMode||isWrongPractice;
+  const isSpecialMode=isWrongPractice;
   
   let nextBtn='';
   if(isSpecialMode){
@@ -994,11 +979,11 @@ function submitExam(){
     return {type:q.type,content:q.content,options:q.options,ua:uaDisplay,correctAns:q.answer,explain:q.explain,status,got,max:q.score};
   });
 
-  // 保存无尽模式或错题库记录
-  if(isEndlessMode||isWrongPractice){
-    const wrongs=JSON.parse(localStorage.getItem('exam_endless_records')||'[]');
+  // 保存错题库记录
+  if(isWrongPractice){
+    const wrongs=JSON.parse(localStorage.getItem('exam_wrong_records')||'[]');
     wrongs.push({time:Date.now(),correct,wrong,partial,total:currentQuestions.length,duration:durationStr});
-    localStorage.setItem('exam_endless_records',JSON.stringify(wrongs.slice(-50)));
+    localStorage.setItem('exam_wrong_records',JSON.stringify(wrongs.slice(-50)));
   }
   
   const passed=currentPaper.pass>0?totalScore>=currentPaper.pass:false;
@@ -1008,7 +993,6 @@ function submitExam(){
   const records=DB.records();records.push(record);DB.set('records',records);
   
   // 重置模式标记
-  isEndlessMode=false;
   isWrongPractice=false;
   
   showResult(record);
@@ -1064,41 +1048,6 @@ function createConfetti(){
     hero.appendChild(c);
     setTimeout(()=>c.remove(),5000);
   }
-}
-
-// ========== 无尽模式 ==========
-let isEndlessMode=false;
-let endlessCurrentIndex=0;
-
-function startEndless(){
-  const allQs=DB.questions();
-  if(!allQs.length){showToast('题库为空，请先添加题目','error');return;}
-  
-  isEndlessMode=true;
-  endlessCurrentIndex=0;
-  currentPaper={id:'endless',name:'无尽模式',duration:60,total:allQs.length*2,pass:0,desc:'挑战全题库！'};
-  currentQuestions=allQs;
-  userAnswers={};
-  reviewMarks=new Set();
-  timeLeft=60*60; // 默认60分钟
-  startTime=Date.now();
-  
-  showPage('examPage');
-  $('examTitle').textContent='无尽模式 · 挑战全题库';
-  $('examInfo').textContent=`共 ${allQs.length} 题 · 答完为止`;
-  $('examIntro').innerHTML=`
-    <h2>无尽模式</h2>
-    <p>挑战全题库！一直作答直到题库刷完，中途退出自动保存并评分</p>
-    <div class="exam-rules">
-      <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>60 分钟</span>
-      <span><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/></svg>${allQs.length} 题</span>
-      <span><svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/></svg>无尽挑战</span>
-    </div>`;
-  
-  $('total').textContent=allQs.length;
-  renderQuestions();
-  startTimer();
-  window.onbeforeunload=e=>{e.preventDefault();e.returnValue='考试进行中，离开将丢失答题进度！';};
 }
 
 // ========== 错题库复习 ==========
@@ -1256,8 +1205,8 @@ function scrollToNextAvailable(){
 const originalSelectSingle=selectSingle;
 selectSingle=function(qid,i,val){
   originalSelectSingle(qid,i,val);
-  // 无尽模式或错题库模式下，答题后自动判断
-  if(isEndlessMode||isWrongPractice){
+  // 错题库模式下，答题后自动判断
+  if(isWrongPractice){
     checkAndNext(qid,i);
   }
 };
@@ -1265,7 +1214,7 @@ selectSingle=function(qid,i,val){
 const originalToggleMulti=toggleMulti;
 toggleMulti=function(qid,i,val){
   originalToggleMulti(qid,i,val);
-  if(isEndlessMode||isWrongPractice){
+  if(isWrongPractice){
     // 多选题需要用户确认
   }
 };
@@ -1273,7 +1222,7 @@ toggleMulti=function(qid,i,val){
 const originalSelectJudge=selectJudge;
 selectJudge=function(qid,i,val){
   originalSelectJudge(qid,i,val);
-  if(isEndlessMode||isWrongPractice){
+  if(isWrongPractice){
     checkAndNext(qid,i);
   }
 };
