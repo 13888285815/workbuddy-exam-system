@@ -13,7 +13,7 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--blue:#185FA5;--blue-light:#E6F1FB;--green:#3B6D11;--green-light:#EAF3DE;--red:#A32D2D;--red-light:#FCEBEB;--amber:#854F0B;--amber-light:#FAEEDA;--text:#1a1a2e;--text2:#555;--text3:#888;--border:#e8edf2;--bg:#f0f4f8;--white:#fff;--radius:12px}
+:root{--blue:#185FA5;--blue-light:#E6F1FB;--green:#3B6D11;--green-light:#EAF3DE;--red:#A32D2D;--red-light:#FCEBEB;--amber:#854F0B;--amber-light:#FAEEDA;--purple:#5B2C8A;--purple-light:#F3EEFC;--pink:#A32D6E;--pink-light:#FCEAEE;--text:#1a1a2e;--text2:#555;--text3:#888;--border:#e8edf2;--bg:#f0f4f8;--white:#fff;--radius:12px}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 /* Layout */
 .layout{display:flex;min-height:100vh}
@@ -814,6 +814,14 @@ C. 选项三
       </div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="closeModal('addPaperModal')">取消</button><button class="btn btn-primary" onclick="savePaper()">保存试卷</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="previewPaperModal">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header"><h3 id="previewPaperTitle">试卷预览</h3><button class="modal-close" onclick="closeModal('previewPaperModal')">×</button></div>
+    <div class="modal-body" id="previewPaperContent"></div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('previewPaperModal')">关闭</button></div>
   </div>
 </div>
 
@@ -2428,8 +2436,8 @@ function saveQuestion(){
 
 // ===================== PAPERS =====================
 let editingPaperId=null;
-function renderPapers(){
-  const papers=DB.papers();
+function renderPapers(papers){
+  papers=papers||DB.papers();
   const statusLabel={draft:'<span class="badge badge-gray">草稿</span>',published:'<span class="badge badge-green">已发布</span>'};
   document.getElementById('paperList').innerHTML=papers.length?papers.map(p=>`
     <div class="exam-card">
@@ -2438,6 +2446,8 @@ function renderPapers(){
         <div style="display:flex;gap:4px;flex-wrap:wrap">
           <span style="background:var(--blue-light);color:var(--blue);padding:2px 8px;border-radius:4px;font-size:11px">${getSubjectName(p.subject)}</span>
           <span style="background:var(--amber-light);color:var(--amber);padding:2px 8px;border-radius:4px;font-size:11px">${getExamTypeName(p.examType)}</span>
+          ${p.grade?'<span style="background:var(--purple-light);color:var(--purple);padding:2px 8px;border-radius:4px;font-size:11px">'+getGradeName(p.grade)+'</span>':''}
+          ${p.semester?'<span style="background:var(--pink-light);color:var(--pink);padding:2px 8px;border-radius:4px;font-size:11px">'+getSemesterName(p.semester)+'</span>':''}
           ${statusLabel[p.status]||''}
         </div>
       </div>
@@ -2447,6 +2457,7 @@ function renderPapers(){
         <div style="margin-top:4px;color:var(--text3);font-size:11px">${p.desc||''}</div>
       </div>
       <div class="actions">
+        <button class="btn btn-sm" onclick="previewPaper('${p.id}')" style="background:var(--purple);color:white">预览</button>
         <button class="btn btn-sm" onclick="editPaper('${p.id}')">编辑</button>
         <button class="btn btn-sm ${p.status==='published'?'btn-danger':'btn-success'}" onclick="togglePaper('${p.id}')">${p.status==='published'?'停用':'发布'}</button>
         <button class="btn btn-danger btn-sm" onclick="deletePaper('${p.id}')">删除</button>
@@ -2501,6 +2512,43 @@ function savePaper(){
 }
 function togglePaper(id){const papers=DB.papers();const p=papers.find(x=>x.id===id);if(p){p.status=p.status==='published'?'draft':'published';DB.set('papers',papers);renderPapers();showToast(p.status==='published'?'试卷已发布':'试卷已停用');}}
 function deletePaper(id){if(!confirm('确认删除该试卷？'))return;DB.set('papers',DB.papers().filter(p=>p.id!==id));renderPapers();showToast('试卷已删除');}
+
+function filterPapers(){
+  const kw=document.getElementById('paperSearchInput').value.trim().toLowerCase();
+  const s=document.getElementById('paperFilterSubject').value;
+  const g=document.getElementById('paperFilterGrade').value;
+  const sm=document.getElementById('paperFilterSemester').value;
+  const all=DB.papers().filter(p=>{
+    if(kw&&!p.name.toLowerCase().includes(kw))return false;
+    if(s&&p.subject!==s)return false;
+    if(g&&p.grade!==g)return false;
+    if(sm&&p.semester!==sm)return false;
+    return true;
+  });
+  renderPapers(all);
+}
+
+function previewPaper(id){
+  const p=DB.papers().find(x=>x.id===id);if(!p)return;
+  const qs=p.questionIds.map(qid=>DB.questions().find(q=>q.id===qid)).filter(Boolean);
+  let html='<div style="max-height:60vh;overflow-y:auto">';
+  qs.forEach((q,i)=>{
+    const at=q.answer&&q.answer.length?q.answer.join('；'):'—';
+    html+='<div style="background:var(--bg);border-radius:12px;padding:14px;margin-bottom:10px">';
+    html+='<div style="font-size:13px;font-weight:600;margin-bottom:6px">'+ (i+1)+'. ['+q.type+'] '+q.content+'</div>';
+    if(q.options){
+      html+='<div style="font-size:12px;color:var(--text2);line-height:1.8">';
+      q.options.forEach((o,oi)=>{html+='<div>'+String.fromCharCode(65+oi)+'. '+o+'</div>';});
+      html+='</div>';
+    }
+    html+='<div style="margin-top:6px;font-size:12px;color:var(--green)">✓ 答案：'+at+'</div>';
+    html+='</div>';
+  });
+  html+='</div>';
+  document.getElementById('previewPaperContent').innerHTML=html||'<div class="empty">暂无题目</div>';
+  document.getElementById('previewPaperTitle').textContent=p.name;
+  openModal('previewPaperModal');
+}
 
 // ===================== PAPER IMPORT =====================
 let paperImportData=null; // 存储解析后的试卷数据
@@ -3456,6 +3504,38 @@ function updateCategoryDropdowns() {
       option.value = s.value;
       option.textContent = s.label;
       pSemester.appendChild(option);
+    });
+  }
+  
+  // Update paper filter dropdowns
+  const pfSubject = document.getElementById('paperFilterSubject');
+  if (pfSubject) {
+    pfSubject.innerHTML = '<option value="">全部学科</option>';
+    SUBJECTS.forEach(s => {
+      const option = document.createElement('option');
+      option.value = s.value;
+      option.textContent = s.icon + ' ' + s.label;
+      pfSubject.appendChild(option);
+    });
+  }
+  const pfGrade = document.getElementById('paperFilterGrade');
+  if (pfGrade) {
+    pfGrade.innerHTML = '<option value="">全部年级</option>';
+    GRADES.forEach(g => {
+      const option = document.createElement('option');
+      option.value = g.value;
+      option.textContent = g.label;
+      pfGrade.appendChild(option);
+    });
+  }
+  const pfSemester = document.getElementById('paperFilterSemester');
+  if (pfSemester) {
+    pfSemester.innerHTML = '<option value="">全部学期</option>';
+    SEMESTERS.forEach(s => {
+      const option = document.createElement('option');
+      option.value = s.value;
+      option.textContent = s.label;
+      pfSemester.appendChild(option);
     });
   }
 }
