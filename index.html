@@ -921,10 +921,9 @@ function renderInputSingle(q,i){
     html+='<textarea class="fill-input" rows="6" placeholder="请输入答案..." oninput="saveText(\''+q.id+'\','+i+',this.value)">'+val+'</textarea><div class="char-count">已输入 '+val.length+' 字 · 简答题由老师人工评分</div>';
   }
   
-  // 确认答案按钮 - 问答题只要有输入就算已答
-  const canConfirm = q.type==='essay' ? (userAnswers[q.id]||'').trim().length>0 : answered;
+  // 确认答案按钮 - 不在HTML中禁用，改为在confirmAnswer中检查
   html+='<div class="q-actions">';
-  html+='<button class="btn btn-primary btn-lg" onclick="confirmAnswer()"'+(!canConfirm && q.type!=='essay'?' disabled':'')+'>确认答案</button>';
+  html+='<button class="btn btn-primary btn-lg" onclick="confirmAnswer()" id="confirmBtn">确认答案</button>';
   html+='</div>';
   
   return html;
@@ -979,10 +978,9 @@ function renderAnswerReview(q){
 
 function confirmAnswer(){
   const q=currentQuestions[currentQIndex];
-  // 问答题只要有输入就算已答
-  const answered = q.type==='essay' ? (userAnswers[q.id]||'').trim().length>0 : isAnswered(q);
+  const answered=isAnswered(q);
   if(!answered){
-    showToast('请先作答','error');
+    showToast('请先作答（填空题请填写答案，问答题请输入内容）','error');
     return;
   }
   answeredQuestions.add(currentQIndex);
@@ -1080,7 +1078,11 @@ function toggleMulti(qid,i,val){
   renderCurrentQuestion();
 }
 function selectJudge(qid,i,val){userAnswers[qid]=val;renderCurrentQuestion();}
-function saveText(qid,i,val){userAnswers[qid]=val;}
+function saveText(qid,i,val){userAnswers[qid]=val;
+  // 启用确认按钮
+  const btn=$('confirmBtn');
+  if(btn && val.trim().length>0)btn.disabled=false;
+}
 
 function updateUI(i){
   renderCurrentQuestion();
