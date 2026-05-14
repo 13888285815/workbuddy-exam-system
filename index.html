@@ -137,6 +137,51 @@ a{text-decoration:none;color:inherit}
 .timer.warning{color:var(--red);background:var(--red-bg);animation:pulse 1s infinite}
 .exam-body{max-width:1000px;margin:0 auto;padding:24px;display:flex;gap:24px;box-sizing:border-box;min-width:0}
 .exam-main{flex:1;min-width:0;overflow:visible}
+
+/* 单题模式 */
+.single-q-card{max-width:720px;margin:0 auto;padding:16px}
+.q-progress{text-align:center;font-size:14px;color:var(--text3);padding:16px 0 8px}
+.q-progress strong{color:var(--blue);font-size:18px}
+.q-actions{margin-top:24px;text-align:center;padding:0 0 16px}
+.btn-lg{padding:14px 48px;font-size:16px;border-radius:12px;font-weight:500}
+.btn-lg:disabled{opacity:.5;cursor:not-allowed}
+.btn-lg:disabled:hover{transform:none;box-shadow:none}
+
+/* 答案显示区域 */
+.answer-result{background:var(--bg);border-radius:12px;padding:20px;margin-top:16px}
+.answer-result.correct{border-left:4px solid var(--green)}
+.answer-result.wrong{border-left:4px solid var(--red)}
+.ans-status{font-size:18px;font-weight:600;margin-bottom:16px}
+.answer-result.correct .ans-status{color:var(--green)}
+.answer-result.wrong .ans-status{color:var(--red)}
+.ans-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;font-size:14px}
+.ans-label{color:var(--text3);min-width:70px;flex-shrink:0}
+.ans-val{color:var(--text);word-break:break-all}
+.ans-val.correct{color:var(--green);font-weight:500}
+.ans-explain{margin-top:16px;padding:12px;background:var(--white);border-radius:8px;font-size:13px;color:var(--text2);line-height:1.7}
+.ans-explain strong{color:var(--text)}
+
+/* 考试说明卡片 */
+.exam-intro-card{background:var(--white);border-radius:20px;padding:40px;text-align:center;max-width:600px;margin:40px auto;box-shadow:var(--shadow)}
+.exam-intro-card h2{font-size:22px;margin-bottom:8px}
+
+/* 移动端优化 */
+@media(max-width:768px){
+  .single-q-card{padding:8px}
+  .q-progress{font-size:13px}
+  .q-progress strong{font-size:16px}
+  .btn-lg{padding:12px 32px;font-size:15px;width:100%;max-width:300px}
+  .exam-intro-card{padding:24px;margin:20px auto}
+  .exam-intro-card h2{font-size:18px}
+  .option-item{padding:12px 14px;font-size:15px}
+  .option-item .opt-letter{width:24px;height:24px;font-size:11px}
+  .judge-btn{padding:16px;font-size:16px}
+  .fill-input{padding:14px;font-size:16px}
+  .answer-result{padding:16px}
+  .ans-status{font-size:16px}
+  .ans-row{flex-direction:column;gap:4px}
+  .ans-label{min-width:auto}
+}
 .exam-sidebar{display:none}
 
 /* 考试说明 */
@@ -514,6 +559,7 @@ const DB={
 
 let currentUser=null, currentPaper=null, currentQuestions=[], userAnswers={}, reviewMarks=new Set();
 let timerInterval=null, timeLeft=0, startTime=null, confirmCallback=null;
+let currentQIndex=0, answeredQuestions=new Set(), showingAnswer=false;
 
 // ========== 工具函数 ==========
 function $(id){return document.getElementById(id);}
@@ -742,53 +788,214 @@ function startExam(paperId){
   reviewMarks=new Set();
   timeLeft=paper.duration*60;
   startTime=Date.now();
+  currentQIndex=0;
+  answeredQuestions=new Set();
+  showingAnswer=false;
   
   showPage('examPage');
   $('examTitle').textContent=paper.name;
   $('examInfo').textContent=`共 ${qs.length} 题 · 满分 ${paper.total} 分 · 及格 ${paper.pass} 分`;
   
-  // 考试说明
+  // 考试说明 + 开始按钮
   const typeStats={};
   qs.forEach(q=>{typeStats[q.type]=(typeStats[q.type]||0)+1;});
   const typeNames={single:'单选题',multi:'多选题',judge:'判断题',fill:'填空题',essay:'简答题'};
   const rules=Object.entries(typeStats).map(([t,c])=>`${typeNames[t]} ${c} 道`).join(' · ');
   
-  $('examIntro').innerHTML=`
-    <h2>${paper.name}</h2>
-    <p>${paper.desc||'认真作答，祝您取得好成绩！'}</p>
-    <div class="exam-rules">
-      <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${paper.duration} 分钟</span>
-      <span><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/></svg>${qs.length} 题</span>
-      <span><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>${rules}</span>
-      <span><svg viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>总分 ${paper.total} 分</span>
-    </div>`;
+  $('examIntro').innerHTML=\`<div class='exam-intro-card'>
+    <h2>📝 ${paper.name}</h2>
+    <p style='color:var(--text2);margin:12px 0'>${paper.desc||'认真作答，祝您取得好成绩！'}</p>
+    <div class='exam-rules' style='justify-content:center'>
+      <span><svg viewBox='0 0 24 24'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>${paper.duration} 分钟</span>
+      <span><svg viewBox='0 0 24 24'><path d='M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2'/></svg>${qs.length} 题</span>
+      <span><svg viewBox='0 0 24 24'><path d='M12 20V10M18 20V4M6 20v-4'/></svg>总分 ${paper.total} 分</span>
+    </div>
+    <div style='margin-top:20px;font-size:13px;color:var(--text3)'>${rules}</div>
+    <button class='btn btn-primary' onclick='beginExam()' style='margin-top:28px;padding:14px 40px;font-size:16px'>开始答题</button>
+  </div>\`;
   
-  renderQuestions();
-  startTimer();
+  $('examQuestions').innerHTML='';
+  $('progressText').textContent='0/'+qs.length;
+  $('progressBar').style.width='0%';
   
   // 防刷新提示
   window.onbeforeunload=e=>{e.preventDefault();e.returnValue='考试进行中，离开将丢失答题进度！';};
 }
 
-function renderQuestions(){
+function beginExam(){
+  showingAnswer=false;
+  renderCurrentQuestion();
+  startTimer();
+}
+
+function renderCurrentQuestion(){
+  const q=currentQuestions[currentQIndex];
+  if(!q)return;
+  
   const typeLabel={single:'单选题',multi:'多选题',judge:'判断题',fill:'填空题',essay:'简答题'};
-  var html='';
-  for(var i=0;i<currentQuestions.length;i++){
-    var q=currentQuestions[i];
-    var answeredClass=isAnswered(q)?'answered':'';
-    html+='<div class="q-card" id="qcard-'+i+'">';
-    html+='<div class="q-header">';
-    html+='<div class="q-num '+answeredClass+'" id="qnum-'+i+'">'+(i+1)+'</div>';
-    html+='<span class="q-type-tag">'+typeLabel[q.type]+'</span>';
-    html+='<span class="q-score">'+q.score+'分</span>';
-    html+='</div>';
-    html+='<div class="q-text">'+q.content+'</div>';
-    html+=renderInput(q,i);
-    html+='</div>';
+  const total=currentQuestions.length;
+  const answered=answeredQuestions.size;
+  
+  // 更新进度
+  $('progressText').textContent=answered+'/'+total;
+  $('progressBar').style.width=(answered/total*100)+'%';
+  $('answered').textContent=answered;
+  $('unanswered').textContent=total-answered;
+  
+  // 渲染单题卡片
+  var html=\`<div class='single-q-card'>\`;
+  
+  // 题目进度条
+  html+=\`<div class='q-progress'>第 <strong>\${currentQIndex+1}</strong> / \${total} 题</div>\`;
+  
+  // 题目卡片
+  html+=\`<div class='q-card' style='margin-top:16px'>\`;
+  html+=\`<div class='q-header'>\`;
+  html+=\`<div class='q-num'>\${currentQIndex+1}</div>\`;
+  html+=\`<span class='q-type-tag'>\${typeLabel[q.type]}</span>\`;
+  html+=\`<span class='q-score'>\${q.score}分</span>\`;
+  html+=\`</div>\`;
+  html+=\`<div class='q-text'>\${q.content}</div>\`;
+  
+  // 选项/答案区域
+  if(showingAnswer){
+    // 显示答案和解析
+    html+=renderAnswerReview(q);
+  }else{
+    // 显示答题区域
+    html+=renderInputSingle(q,currentQIndex);
   }
+  
+  html+='</div></div>';
+  
   $('examQuestions').innerHTML=html;
+  $('examIntro').innerHTML='';
+  
+  // 更新题目导航点
   renderDots();
-  updateProgress();
+}
+
+function renderInputSingle(q,i){
+  const answered=isAnswered(q);
+  
+  let html='';
+  
+  if(q.type==='single'){
+    var optsHtml='';
+    for(var oi=0;oi<q.options.length;oi++){
+      var opt=q.options[oi];
+      var selClass=userAnswers[q.id]===opt[0]?'selected':'';
+      var rawOpt=typeof opt==='string'?opt.replace(/^[A-Ea-e][\.、\s　]+/,''):String(opt);
+      optsHtml+=\`<div class='option-item \${selClass}' onclick='selectSingle("\${q.id}",\${i},"\${opt[0]}")'><span class='opt-letter'>\${String.fromCharCode(65+oi)}</span><span>\${rawOpt}</span></div>\`;
+    }
+    html+=\`<div class='options'>\${optsHtml}</div>\`;
+  }
+  else if(q.type==='multi'){
+    var sel=userAnswers[q.id]||[];
+    var optsHtml='';
+    for(var oi=0;oi<q.options.length;oi++){
+      var opt=q.options[oi];
+      var selClass=sel.indexOf(opt[0])>=0?'selected':'';
+      var checked=sel.indexOf(opt[0])>=0?'checked':'';
+      var rawOpt=typeof opt==='string'?opt.replace(/^[A-Ea-e][\.、\s　]+/,''):String(opt);
+      optsHtml+=\`<div class='option-item \${selClass}' onclick='toggleMulti("\${q.id}",\${i},"\${opt[0]}")'><input type='checkbox' \${checked} style='pointer-events:none'><span class='opt-letter'>\${String.fromCharCode(65+oi)}</span><span>\${rawOpt}</span></div>\`;
+    }
+    html+=\`<div class='options'>\${optsHtml}</div><p style='font-size:12px;color:var(--text3);margin-top:10px'>提示：多选题，请选择所有正确答案</p>\`;
+  }
+  else if(q.type==='judge'){
+    var val=userAnswers[q.id];
+    var trueClass=val==='正确'?'selected-true':'';
+    var falseClass=val==='错误'?'selected-false':'';
+    html+=\`<div class='judge-options'><div class='judge-btn \${trueClass}' onclick='selectJudge("\${q.id}",\${i},"正确")'>✓ 正确</div><div class='judge-btn \${falseClass}' onclick='selectJudge("\${q.id}",\${i},"错误")'>✗ 错误</div></div>\`;
+  }
+  else if(q.type==='fill'){
+    const val=userAnswers[q.id]||'';
+    html+=\`<input class='fill-input' type='text' placeholder='请输入答案' value="\${val}" oninput='saveText("\${q.id}",\${i},this.value)'><div class='char-count'>已输入 \${val.length} 字</div>\`;
+  }
+  else if(q.type==='essay'){
+    const val=userAnswers[q.id]||'';
+    html+=\`<textarea class='fill-input' rows='6' placeholder='请输入答案...' oninput='saveText("\${q.id}",\${i},this.value)'>\${val}</textarea><div class='char-count'>已输入 \${val.length} 字</div>\`;
+  }
+  
+  // 确认答案按钮
+  html+=\`<div class='q-actions'>\`;
+  html+=\`<button class='btn btn-primary btn-lg' onclick='confirmAnswer()' \${!answered?'disabled':''}>确认答案</button>\`;
+  html+='</div>';
+  
+  return html;
+}
+
+function renderAnswerReview(q){
+  const ua=userAnswers[q.id];
+  const correctAns=q.answer;
+  let isCorrect=false;
+  let status='';
+  
+  // 判断答案是否正确
+  if(q.type==='single'){
+    isCorrect=ua===correctAns;
+    status=isCorrect?'✓ 正确':'✗ 错误';
+  }else if(q.type==='multi'){
+    const uaStr=Array.isArray(ua)?ua.sort().join(''):ua||'';
+    const caStr=Array.isArray(correctAns)?correctAns.sort().join(''):correctAns||'';
+    isCorrect=uaStr===caStr;
+    status=isCorrect?'✓ 正确':'✗ 错误';
+  }else if(q.type==='judge'){
+    isCorrect=ua===correctAns;
+    status=isCorrect?'✓ 正确':'✗ 错误';
+  }else if(q.type==='fill'||q.type==='essay'){
+    const ua2=(ua||'').toLowerCase();
+    const kw=(correctAns||'').toLowerCase().split(/[,，\s]+/).filter(w=>w.length>1);
+    const hit=kw.filter(k=>ua2.includes(k)).length;
+    isCorrect=hit>=Math.ceil(kw.length*0.6);
+    status=hit>0?\`关键词命中 \${hit}/\${kw.length}\`:'未命中关键词';
+  }
+  
+  let html=\`<div class='answer-result \${isCorrect?'correct':'wrong'}'>\`;
+  html+=\`<div class='ans-status'>\${status}</div>\`;
+  html+=\`<div class='ans-row'><span class='ans-label'>你的答案</span><span class='ans-val'>\${Array.isArray(ua)?ua.join('、'):ua||'未作答'}</span></div>\`;
+  html+=\`<div class='ans-row'><span class='ans-label'>正确答案</span><span class='ans-val correct'>\${Array.isArray(correctAns)?correctAns.join('、'):correctAns||'-'}</span></div>\`;
+  if(q.explain){
+    html+=\`<div class='ans-explain'><strong>解析：</strong>\${q.explain}</div>\`;
+  }
+  html+='</div>';
+  
+  // 下一题/完成按钮
+  html+=\`<div class='q-actions'>\`;
+  if(currentQIndex<currentQuestions.length-1){
+    html+=\`<button class='btn btn-primary btn-lg' onclick='nextQuestion()'>下一题 →</button>\`;
+  }else{
+    html+=\`<button class='btn btn-primary btn-lg' onclick='finishExam()'>完成考试</button>\`;
+  }
+  html+='</div>';
+  
+  return html;
+}
+
+function confirmAnswer(){
+  const q=currentQuestions[currentQIndex];
+  if(!isAnswered(q)){
+    showToast('请先作答','error');
+    return;
+  }
+  answeredQuestions.add(currentQIndex);
+  showingAnswer=true;
+  renderCurrentQuestion();
+}
+
+function nextQuestion(){
+  currentQIndex++;
+  showingAnswer=false;
+  renderCurrentQuestion();
+  window.scrollTo(0,0);
+}
+
+function finishExam(){
+  submitExam();
+}
+
+function renderQuestions(){
+  renderCurrentQuestion();
 }
 
 function renderInput(q,i){
@@ -856,30 +1063,20 @@ function toggleMark(qid,i){
   updateDot(i);
 }
 
-function selectSingle(qid,i,val){userAnswers[qid]=val;updateUI(i);}
+function selectSingle(qid,i,val){userAnswers[qid]=val;renderCurrentQuestion();}
 function toggleMulti(qid,i,val){
   if(!userAnswers[qid])userAnswers[qid]=[];
   const arr=userAnswers[qid];
   const idx=arr.indexOf(val);
   if(idx>=0)arr.splice(idx,1);else arr.push(val);
   arr.sort();
-  updateUI(i);
+  renderCurrentQuestion();
 }
-function selectJudge(qid,i,val){userAnswers[qid]=val;updateUI(i);}
-function saveText(qid,i,val){userAnswers[qid]=val;updateDot(i);updateProgress();}
+function selectJudge(qid,i,val){userAnswers[qid]=val;renderCurrentQuestion();}
+function saveText(qid,i,val){userAnswers[qid]=val;}
 
 function updateUI(i){
-  const q=currentQuestions[i];
-  const card=$('qcard-'+i);
-  if(!card)return;
-  const el=card.querySelector('.options,.judge-options,.fill-input');
-  if(el){
-    const t=document.createElement('div');
-    t.innerHTML=renderInput(q,i);
-    card.replaceChild(t.firstChild,el);
-  }
-  updateDot(i);
-  updateProgress();
+  renderCurrentQuestion();
 }
 
 function updateDot(i){
@@ -903,14 +1100,24 @@ function isAnswered(q){
 function renderDots(){
   $('dotGrid').innerHTML=currentQuestions.map((q,i)=>{
     let cls='dot';
-    if(isAnswered(q))cls+=' ans';
-    if(reviewMarks.has(q.id))cls+=' review';
-    return `<div class="${cls}" id="dot-${i}" onclick="scrollToQ(${i})" title="第${i+1}题">${i+1}</div>`;
+    if(i===currentQIndex)cls+=' current';
+    if(answeredQuestions.has(i))cls+=' ans';
+    return `<div class="${cls}" id="dot-${i}" onclick="goToQuestion(${i})" title="第${i+1}题">${i+1}</div>`;
   }).join('');
 }
 
-function scrollToQ(i){
-  $('qcard-'+i)?.scrollIntoView({behavior:'smooth',block:'center'});
+function goToQuestion(i){
+  if(showingAnswer){
+    showToast('请先完成当前题目','error');return;
+  }
+  if(i!==currentQIndex && !answeredQuestions.has(currentQIndex) && isAnswered(currentQuestions[currentQIndex])){
+    // 当前题已答但未确认，提示用户
+    if(!confirm('当前题目尚未确认，跳过将不会保存答案。确定跳过吗？'))return;
+  }
+  currentQIndex=i;
+  showingAnswer=false;
+  renderCurrentQuestion();
+  window.scrollTo(0,0);
 }
 
 function updateProgress(){
@@ -1108,22 +1315,28 @@ function startWrongPractice(){
   reviewMarks=new Set();
   timeLeft=wrongQs.length*2*60;
   startTime=Date.now();
+  currentQIndex=0;
+  answeredQuestions=new Set();
+  showingAnswer=false;
   
   showPage('examPage');
   $('examTitle').textContent='错题库 · 针对性复习';
   $('examInfo').textContent=`共 ${wrongQs.length} 道错题`;
-  $('examIntro').innerHTML=`
-    <h2>错题库复习</h2>
-    <p>针对之前做错的题目进行复习，直到完全掌握</p>
-    <div class="exam-rules">
-      <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${wrongQs.length*2} 分钟</span>
-      <span><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/></svg>${wrongQs.length} 题</span>
-      <span><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>查漏补缺</span>
-    </div>`;
   
-  $('total').textContent=wrongQs.length;
-  renderQuestions();
-  startTimer();
+  $('examIntro').innerHTML=`<div class='exam-intro-card'>
+    <h2>📝 错题库复习</h2>
+    <p style='color:var(--text2);margin:12px 0'>针对之前做错的题目进行复习，直到完全掌握</p>
+    <div class='exam-rules' style='justify-content:center'>
+      <span><svg viewBox='0 0 24 24'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>${wrongQs.length*2} 分钟</span>
+      <span><svg viewBox='0 0 24 24'><path d='M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2'/></svg>${wrongQs.length} 题</span>
+    </div>
+    <button class='btn btn-primary' onclick='beginExam()' style='margin-top:28px;padding:14px 40px;font-size:16px'>开始复习</button>
+  </div>`;
+  
+  $('examQuestions').innerHTML='';
+  $('progressText').textContent='0/'+wrongQs.length;
+  $('progressBar').style.width='0%';
+  
   window.onbeforeunload=e=>{e.preventDefault();e.returnValue='考试进行中，离开将丢失答题进度！';};
 }
 
