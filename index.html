@@ -767,21 +767,33 @@ function renderInput(q,i){
   }
   
   if(q.type==='single'){
-    return `<div class="options">${q.options.map((opt,oi)=>`<div class="option-item ${userAnswers[q.id]===opt[0]?'selected':''}" onclick="selectSingle('${q.id}',${i},'${opt[0]}')"><span class="opt-letter">${String.fromCharCode(65+oi)}</span><span>${opt}</span></div>`).join('')}</div><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">${isSpecialMode?nextBtn:`<button class="btn btn-sm" onclick="toggleMark('${q.id}',${i})" style="font-size:11px">${marked?'取消标记':'标记此题'}</button>`}</div>`;
+    var optsHtml='';
+    for(var oi=0;oi<q.options.length;oi++){
+      var opt=q.options[oi];
+      var selClass=userAnswers[q.id]===opt[0]?'selected':'';
+      optsHtml+='<div class="option-item '+selClass+'" onclick="selectSingle(\''+q.id+'\','+i+',\''+opt[0]+'\')"><span class="opt-letter">'+String.fromCharCode(65+oi)+'</span><span>'+opt+'</span></div>';
+    }
+    var btnHtml=isSpecialMode?nextBtn:'<button class="btn btn-sm" onclick="toggleMark(\''+q.id+'\','+i+')" style="font-size:11px">'+(marked?'取消标记':'标记此题')+'</button>';
+    return '<div class="options">'+optsHtml+'</div><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">'+btnHtml+'</div>';
   }
   if(q.type==='multi'){
-    const sel=(userAnswers[q.id]||[]);
-    return `<div class="options">${q.options.map((opt,oi)=>`<div class="option-item ${sel.includes(opt[0])?'selected':''}" onclick="toggleMulti('${q.id}',${i},'${opt[0]}')"><input type="checkbox" ${sel.includes(opt[0])?'checked':''} style="pointer-events:none"><span class="opt-letter">${String.fromCharCode(65+oi)}</span><span>${opt}</span></div>`).join('')}</div><p style="font-size:12px;color:var(--text3);margin-top:10px">提示：多选题，请选择所有正确答案</p><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">${isSpecialMode?nextBtn:`<button class="btn btn-sm" onclick="toggleMark('${q.id}',${i})" style="font-size:11px">${marked?'取消标记':'标记此题'}</button>`}</div>`;
+    var sel=userAnswers[q.id]||[];
+    var optsHtml='';
+    for(var oi=0;oi<q.options.length;oi++){
+      var opt=q.options[oi];
+      var selClass=sel.indexOf(opt[0])>=0?'selected':'';
+      var checked=sel.indexOf(opt[0])>=0?'checked':'';
+      optsHtml+='<div class="option-item '+selClass+'" onclick="toggleMulti(\''+q.id+'\','+i+',\''+opt[0]+'\')"><input type="checkbox" '+checked+' style="pointer-events:none"><span class="opt-letter">'+String.fromCharCode(65+oi)+'</span><span>'+opt+'</span></div>';
+    }
+    var btnHtml=isSpecialMode?nextBtn:'<button class="btn btn-sm" onclick="toggleMark(\''+q.id+'\','+i+')" style="font-size:11px">'+(marked?'取消标记':'标记此题')+'</button>';
+    return '<div class="options">'+optsHtml+'</div><p style="font-size:12px;color:var(--text3);margin-top:10px">提示：多选题，请选择所有正确答案</p><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">'+btnHtml+'</div>';
   }
   if(q.type==='judge'){
-    const val=userAnswers[q.id];
-    return `<div class="judge-options">
-      <div class="judge-btn ${val==='正确'?'selected-true':''}" onclick="selectJudge('${q.id}',${i},'正确')">✓ 正确</div>
-      <div class="judge-btn ${val==='错误'?'selected-false':''}" onclick="selectJudge('${q.id}',${i},'错误')">✗ 错误</div>
-    </div>
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-      ${isSpecialMode?nextBtn:`<button class="btn btn-sm" onclick="toggleMark('${q.id}',${i})" style="font-size:11px">${marked?'取消标记':'标记此题'}</button>`}
-    </div>`;
+    var val=userAnswers[q.id];
+    var trueClass=val==='正确'?'selected-true':'';
+    var falseClass=val==='错误'?'selected-false':'';
+    var btnHtml=isSpecialMode?nextBtn:'<button class="btn btn-sm" onclick="toggleMark(\''+q.id+'\','+i+')" style="font-size:11px">'+(marked?'取消标记':'标记此题')+'</button>';
+    return '<div class="judge-options"><div class="judge-btn '+trueClass+'" onclick="selectJudge(\''+q.id+'\','+i+',\'正确\')">✓ 正确</div><div class="judge-btn '+falseClass+'" onclick="selectJudge(\''+q.id+'\','+i+',\'错误\')">✗ 错误</div></div><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">'+btnHtml+'</div>';
   }
   if(q.type==='fill'){
     const val=userAnswers[q.id]||'';
