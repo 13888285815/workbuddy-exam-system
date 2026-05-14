@@ -136,7 +136,7 @@ a{text-decoration:none;color:inherit}
 .timer svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none}
 .timer.warning{color:var(--red);background:var(--red-bg);animation:pulse 1s infinite}
 .exam-body{max-width:1000px;margin:0 auto;padding:24px;display:flex;gap:24px}
-.exam-main{flex:1;min-width:0}
+.exam-main{flex:1;min-width:0;overflow:hidden}
 .exam-sidebar{width:220px;flex-shrink:0}
 
 /* 考试说明 */
@@ -148,7 +148,7 @@ a{text-decoration:none;color:inherit}
 .exam-rules svg{width:14px;height:14px;stroke:var(--blue);stroke-width:2;fill:none}
 
 /* 题目 */
-.q-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:16px;transition:all .3s}
+.q-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:16px;transition:all .3s;overflow:hidden}
 .q-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.06)}
 .q-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
 .q-num{background:var(--blue);color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
@@ -331,7 +331,7 @@ textarea.fill-input{resize:vertical;min-height:120px}
 <div class="modal-overlay" id="loginModal">
   <div class="modal-box">
     <button class="modal-close" onclick="closeLogin()">&times;</button>
-    <h2>管理员登录</h2>
+    <h2>考生登录</h2>
     <p class="sub">登录后开始考试管理</p>
     <div class="form-group">
       <label>用户名</label>
