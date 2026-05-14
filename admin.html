@@ -208,10 +208,6 @@ textarea{resize:vertical;min-height:80px}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span>用户管理</span>
       </div>
-      <div class="nav-item" onclick="showPage('import')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <span>PDF导入</span>
-      </div>
       <div class="nav-item" onclick="showPage('questions')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         <span>题库管理</span>
@@ -460,6 +456,18 @@ C. 选项三
             </div>
           </div>
           <div class="panel-body">
+            <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+              <input type="text" id="paperSearchInput" placeholder="搜索试卷名称..." oninput="filterPapers()" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+              <select id="paperFilterSubject" onchange="filterPapers()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                <option value="">全部学科</option>
+              </select>
+              <select id="paperFilterGrade" onchange="filterPapers()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                <option value="">全部年级</option>
+              </select>
+              <select id="paperFilterSemester" onchange="filterPapers()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                <option value="">全部学期</option>
+              </select>
+            </div>
             <div id="paperList" class="exam-cards"></div>
           </div>
         </div>
@@ -511,12 +519,13 @@ C. 选项三
         <div class="panel">
           <div class="panel-header">
             <h3>分类管理</h3>
+            <span style="font-size:12px;color:var(--text3)">点击分类名称可编辑，点击×删除</span>
           </div>
           <div class="panel-body">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
               <!-- Subject Categories -->
               <div style="background:var(--bg);border-radius:12px;padding:20px">
-                <h4 style="margin-bottom:16px;font-size:15px;font-weight:500;color:var(--text)">学科分类</h4>
+                <h4 style="margin-bottom:16px;font-size:15px;font-weight:500;color:var(--text)">📖 学科分类</h4>
                 <div style="display:flex;gap:8px;margin-bottom:16px">
                   <input type="text" id="newSubjectInput" placeholder="新增学科（如：语文）" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
                   <button class="btn btn-primary btn-sm" onclick="addSubjectCategory()">添加</button>
@@ -526,12 +535,32 @@ C. 选项三
               
               <!-- Exam Categories -->
               <div style="background:var(--bg);border-radius:12px;padding:20px">
-                <h4 style="margin-bottom:16px;font-size:15px;font-weight:500;color:var(--text)">考试分类</h4>
+                <h4 style="margin-bottom:16px;font-size:15px;font-weight:500;color:var(--text)">📋 考试分类</h4>
                 <div style="display:flex;gap:8px;margin-bottom:16px">
                   <input type="text" id="newExamTypeInput" placeholder="新增考试类型（如：月考）" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
                   <button class="btn btn-primary btn-sm" onclick="addExamCategory()">添加</button>
                 </div>
                 <div id="examCategoriesList" style="display:flex;flex-direction:column;gap:8px"></div>
+              </div>
+
+              <!-- Grade Categories -->
+              <div style="background:var(--bg);border-radius:12px;padding:20px">
+                <h4 style="margin-bottom:16px;font-size:15px;font-weight:500;color:var(--text)">🎓 年级分类</h4>
+                <div style="display:flex;gap:8px;margin-bottom:16px">
+                  <input type="text" id="newGradeInput" placeholder="新增年级（如：七年级）" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                  <button class="btn btn-primary btn-sm" onclick="addGradeCategory()">添加</button>
+                </div>
+                <div id="gradeCategoriesList" style="display:flex;flex-direction:column;gap:8px"></div>
+              </div>
+
+              <!-- Semester Categories -->
+              <div style="background:var(--bg);border-radius:12px;padding:20px">
+                <h4 style="margin-bottom:16px;font-size:15px;font-weight:500;color:var(--text)">📅 学期分类</h4>
+                <div style="display:flex;gap:8px;margin-bottom:16px">
+                  <input type="text" id="newSemesterInput" placeholder="新增学期（如：第三学期）" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                  <button class="btn btn-primary btn-sm" onclick="addSemesterCategory()">添加</button>
+                </div>
+                <div id="semesterCategoriesList" style="display:flex;flex-direction:column;gap:8px"></div>
               </div>
             </div>
           </div>
@@ -752,6 +781,18 @@ C. 选项三
         </div>
       </div>
       <div class="form-row">
+        <div class="form-group"><label>年级分类</label>
+          <select id="pGrade">
+            <!-- 选项将通过JavaScript动态加载 -->
+          </select>
+        </div>
+        <div class="form-group"><label>学期分类</label>
+          <select id="pSemester">
+            <!-- 选项将通过JavaScript动态加载 -->
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label>总分</label><input id="pTotal" type="number" value="100" min="1"></div>
         <div class="form-group"><label>考试时长（分钟）</label><input id="pDuration" type="number" value="60" min="1"></div>
       </div>
@@ -816,6 +857,30 @@ const EXAM_TYPES = [
   {value:'other',label:'其他'}
 ];
 
+// 年级分类
+const GRADES = [
+  {value:'all',label:'全部年级'},
+  {value:'grade1',label:'一年级'},
+  {value:'grade2',label:'二年级'},
+  {value:'grade3',label:'三年级'},
+  {value:'grade4',label:'四年级'},
+  {value:'grade5',label:'五年级'},
+  {value:'grade6',label:'六年级'},
+  {value:'grade7',label:'七年级'},
+  {value:'grade8',label:'八年级'},
+  {value:'grade9',label:'九年级'},
+  {value:'high1',label:'高一'},
+  {value:'high2',label:'高二'},
+  {value:'high3',label:'高三'}
+];
+
+// 学期分类
+const SEMESTERS = [
+  {value:'all',label:'全部学期'},
+  {value:'term1',label:'第一学期'},
+  {value:'term2',label:'第二学期'}
+];
+
 // 获取学科名称
 function getSubjectName(value){
   const s=SUBJECTS.find(x=>x.value===value);
@@ -828,6 +893,18 @@ function getExamTypeName(value){
   return t?t.label:value;
 }
 
+// 获取年级名称
+function getGradeName(value){
+  const g=GRADES.find(x=>x.value===value);
+  return g?g.label:value;
+}
+
+// 获取学期名称
+function getSemesterName(value){
+  const s=SEMESTERS.find(x=>x.value===value);
+  return s?s.label:value;
+}
+
 // 学科下拉选项HTML
 function getSubjectOptions(selected){
   return SUBJECTS.map(s=>`<option value="${s.value}" ${s.value===selected?'selected':''}>${s.icon} ${s.label}</option>`).join('');
@@ -836,6 +913,16 @@ function getSubjectOptions(selected){
 // 考试类型下拉选项HTML
 function getExamTypeOptions(selected){
   return EXAM_TYPES.map(e=>`<option value="${e.value}" ${e.value===selected?'selected':''}>${e.label}</option>`).join('');
+}
+
+// 年级下拉选项HTML
+function getGradeOptions(selected){
+  return GRADES.map(g=>`<option value="${g.value}" ${g.value===selected?'selected':''}>${g.label}</option>`).join('');
+}
+
+// 学期下拉选项HTML
+function getSemesterOptions(selected){
+  return SEMESTERS.map(s=>`<option value="${s.value}" ${s.value===selected?'selected':''}>${s.label}</option>`).join('');
 }
 
 // ===================== INIT =====================
@@ -922,9 +1009,9 @@ function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  const titles={dashboard:'控制台',users:'用户管理',import:'PDF导入',questions:'题库管理',papers:'试卷管理',records:'成绩统计',trash:'回收站',cleanup:'数据清理',categories:'分类管理'};
+  const titles={dashboard:'控制台',users:'用户管理',questions:'题库管理',papers:'试卷管理',records:'成绩统计',trash:'回收站',cleanup:'数据清理',categories:'分类管理'};
   document.getElementById('pageTitle').textContent=titles[name]||name;
-  const idx={dashboard:0,users:1,import:2,questions:3,papers:4,records:5,trash:6,cleanup:7,categories:8};
+  const idx={dashboard:0,users:1,questions:2,papers:3,records:4,trash:5,cleanup:6,categories:7};
   document.querySelectorAll('.nav-item')[idx[name]]?.classList.add('active');
   if(name==='dashboard')renderDashboard();
   if(name==='users')renderUsers();
@@ -2367,14 +2454,16 @@ function renderPapers(){
     </div>`).join(''):'<div class="empty" style="grid-column:1/-1">暂无试卷，点击"创建试卷"开始</div>';
 }
 
-function openAddPaper(){editingPaperId=null;document.getElementById('paperModalTitle').textContent='创建试卷';['pName','pDesc'].forEach(id=>document.getElementById(id).value='');document.getElementById('pSubject').value='info';document.getElementById('pExamType').value='monthly';document.getElementById('pTotal').value=100;document.getElementById('pDuration').value=60;document.getElementById('pPass').value=60;document.getElementById('pStatus').value='draft';document.getElementById('pSingle').value=10;document.getElementById('pMulti').value=5;document.getElementById('pJudge').value=5;document.getElementById('pFill').value=3;document.getElementById('pEssay').value=2;}
+function openAddPaper(){editingPaperId=null;document.getElementById('paperModalTitle').textContent='创建试卷';['pName','pDesc'].forEach(id=>document.getElementById(id).value='');document.getElementById('pSubject').value=SUBJECTS[0]?SUBJECTS[0].value:'';document.getElementById('pExamType').value=EXAM_TYPES[0]?EXAM_TYPES[0].value:'';document.getElementById('pGrade').value=GRADES[0]?GRADES[0].value:'';document.getElementById('pSemester').value=SEMESTERS[0]?SEMESTERS[0].value:'';document.getElementById('pTotal').value=100;document.getElementById('pDuration').value=60;document.getElementById('pPass').value=60;document.getElementById('pStatus').value='draft';document.getElementById('pSingle').value=10;document.getElementById('pMulti').value=5;document.getElementById('pJudge').value=5;document.getElementById('pFill').value=3;document.getElementById('pEssay').value=2;}
 function editPaper(id){
   const p=DB.papers().find(x=>x.id===id);if(!p)return;
   editingPaperId=id;
   document.getElementById('paperModalTitle').textContent='编辑试卷';
   document.getElementById('pName').value=p.name;
-  document.getElementById('pSubject').value=p.subject||'info';
-  document.getElementById('pExamType').value=p.examType||'monthly';
+  document.getElementById('pSubject').value=p.subject||'';
+  document.getElementById('pExamType').value=p.examType||'';
+  document.getElementById('pGrade').value=p.grade||'';
+  document.getElementById('pSemester').value=p.semester||'';
   document.getElementById('pTotal').value=p.total;
   document.getElementById('pDuration').value=p.duration;
   document.getElementById('pPass').value=p.pass;
@@ -2387,6 +2476,8 @@ function savePaper(){
   if(!name){showToast('请输入试卷名称','error');return;}
   const subject=document.getElementById('pSubject').value;
   const examType=document.getElementById('pExamType').value;
+  const grade=document.getElementById('pGrade').value;
+  const semester=document.getElementById('pSemester').value;
   const total=parseInt(document.getElementById('pTotal').value)||100;
   const duration=parseInt(document.getElementById('pDuration').value)||60;
   const pass=parseInt(document.getElementById('pPass').value)||60;
@@ -2403,7 +2494,7 @@ function savePaper(){
   }
   if(questionIds.length===0){showToast('该学科题库中暂无可用题目，请先导入相应学科的题目','error');return;}
   const papers=DB.papers();
-  const p={id:editingPaperId||'p'+Date.now(),name,subject,examType,total,duration,pass,status,desc,questionIds,created:new Date().toLocaleDateString()};
+  const p={id:editingPaperId||'p'+Date.now(),name,subject,examType,grade,semester,total,duration,pass,status,desc,questionIds,created:new Date().toLocaleDateString()};
   if(editingPaperId){const idx=papers.findIndex(x=>x.id===editingPaperId);if(idx>=0)papers[idx]=p;}
   else papers.push(p);
   DB.set('papers',papers);closeModal('addPaperModal');renderPapers();showToast(editingPaperId?'试卷已更新':(`试卷已创建，包含${questionIds.length}道题目`));
@@ -3215,6 +3306,30 @@ function initCategories() {
       }
     });
   }
+  
+  // Initialize grade categories if not exist in localStorage
+  if (!localStorage.getItem('gradeCategories')) {
+    localStorage.setItem('gradeCategories', JSON.stringify(GRADES.map(g => g.label)));
+  } else {
+    const storedGrades = JSON.parse(localStorage.getItem('gradeCategories')) || [];
+    storedGrades.forEach(label => {
+      if (!GRADES.find(g => g.label === label)) {
+        GRADES.push({value: 'grade_' + (GRADES.length + 1), label: label});
+      }
+    });
+  }
+  
+  // Initialize semester categories if not exist in localStorage
+  if (!localStorage.getItem('semesterCategories')) {
+    localStorage.setItem('semesterCategories', JSON.stringify(SEMESTERS.map(s => s.label)));
+  } else {
+    const storedSemesters = JSON.parse(localStorage.getItem('semesterCategories')) || [];
+    storedSemesters.forEach(label => {
+      if (!SEMESTERS.find(s => s.label === label)) {
+        SEMESTERS.push({value: 'semester_' + (SEMESTERS.length + 1), label: label});
+      }
+    });
+  }
 }
 
 function loadCategories() {
@@ -3225,10 +3340,7 @@ function loadCategories() {
     SUBJECTS.forEach((s, index) => {
       const item = document.createElement('div');
       item.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:white;border-radius:8px;border:1px solid var(--border);';
-      item.innerHTML = `
-        <span style="font-size:13px;color:var(--text)">${s.icon} ${s.label}</span>
-        <button class="btn btn-danger btn-sm" onclick="deleteSubjectCategory(${index})" style="padding:4px 8px;font-size:11px">删除</button>
-      `;
+      item.innerHTML = '<span style="font-size:13px">'+s.icon+' '+s.label+'</span><button class="btn btn-danger btn-sm" onclick="deleteSubjectCategory('+index+')" style="padding:4px 8px;font-size:11px">×</button>';
       subjectList.appendChild(item);
     });
   }
@@ -3240,11 +3352,32 @@ function loadCategories() {
     EXAM_TYPES.forEach((e, index) => {
       const item = document.createElement('div');
       item.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:white;border-radius:8px;border:1px solid var(--border);';
-      item.innerHTML = `
-        <span style="font-size:13px;color:var(--text)">${e.label}</span>
-        <button class="btn btn-danger btn-sm" onclick="deleteExamCategory(${index})" style="padding:4px 8px;font-size:11px">删除</button>
-      `;
+      item.innerHTML = '<span style="font-size:13px">'+e.label+'</span><button class="btn btn-danger btn-sm" onclick="deleteExamCategory('+index+')" style="padding:4px 8px;font-size:11px">×</button>';
       examList.appendChild(item);
+    });
+  }
+  
+  // Load grade categories
+  const gradeList = document.getElementById('gradeCategoriesList');
+  if (gradeList) {
+    gradeList.innerHTML = '';
+    GRADES.forEach((g, index) => {
+      const item = document.createElement('div');
+      item.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:white;border-radius:8px;border:1px solid var(--border);';
+      item.innerHTML = '<span style="font-size:13px">'+g.label+'</span><button class="btn btn-danger btn-sm" onclick="deleteGradeCategory('+index+')" style="padding:4px 8px;font-size:11px">×</button>';
+      gradeList.appendChild(item);
+    });
+  }
+  
+  // Load semester categories
+  const semesterList = document.getElementById('semesterCategoriesList');
+  if (semesterList) {
+    semesterList.innerHTML = '';
+    SEMESTERS.forEach((s, index) => {
+      const item = document.createElement('div');
+      item.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:white;border-radius:8px;border:1px solid var(--border);';
+      item.innerHTML = '<span style="font-size:13px">'+s.label+'</span><button class="btn btn-danger btn-sm" onclick="deleteSemesterCategory('+index+')" style="padding:4px 8px;font-size:11px">×</button>';
+      semesterList.appendChild(item);
     });
   }
   
@@ -3299,6 +3432,30 @@ function updateCategoryDropdowns() {
       option.value = e.value;
       option.textContent = e.label;
       pExamType.appendChild(option);
+    });
+  }
+  
+  // Update grade dropdown in add paper modal
+  const pGrade = document.getElementById('pGrade');
+  if (pGrade) {
+    pGrade.innerHTML = '';
+    GRADES.forEach(g => {
+      const option = document.createElement('option');
+      option.value = g.value;
+      option.textContent = g.label;
+      pGrade.appendChild(option);
+    });
+  }
+  
+  // Update semester dropdown in add paper modal
+  const pSemester = document.getElementById('pSemester');
+  if (pSemester) {
+    pSemester.innerHTML = '';
+    SEMESTERS.forEach(s => {
+      const option = document.createElement('option');
+      option.value = s.value;
+      option.textContent = s.label;
+      pSemester.appendChild(option);
     });
   }
 }
@@ -3401,6 +3558,50 @@ function deleteExamCategory(index) {
     loadCategories();
     updateCategoryDropdowns();
     showToast('已删除考试类型: ' + deleted.label, 'success');
+  }
+}
+
+function addGradeCategory() {
+  const input = document.getElementById('newGradeInput');
+  const newCategory = input.value.trim();
+  if (!newCategory) { showToast('请输入年级名称', 'error'); return; }
+  if (GRADES.find(g => g.label === newCategory)) { showToast('该年级已存在', 'error'); return; }
+  const value = 'grade_' + (GRADES.length + 1);
+  GRADES.push({value: value, label: newCategory});
+  localStorage.setItem('gradeCategories', JSON.stringify(GRADES.map(g => g.label)));
+  input.value = '';
+  loadCategories();
+  showToast('年级添加成功', 'success');
+}
+
+function deleteGradeCategory(index) {
+  if (index >= 0 && index < GRADES.length) {
+    const deleted = GRADES.splice(index, 1)[0];
+    localStorage.setItem('gradeCategories', JSON.stringify(GRADES.map(g => g.label)));
+    loadCategories();
+    showToast('已删除年级: ' + deleted.label, 'success');
+  }
+}
+
+function addSemesterCategory() {
+  const input = document.getElementById('newSemesterInput');
+  const newCategory = input.value.trim();
+  if (!newCategory) { showToast('请输入学期名称', 'error'); return; }
+  if (SEMESTERS.find(s => s.label === newCategory)) { showToast('该学期已存在', 'error'); return; }
+  const value = 'semester_' + (SEMESTERS.length + 1);
+  SEMESTERS.push({value: value, label: newCategory});
+  localStorage.setItem('semesterCategories', JSON.stringify(SEMESTERS.map(s => s.label)));
+  input.value = '';
+  loadCategories();
+  showToast('学期添加成功', 'success');
+}
+
+function deleteSemesterCategory(index) {
+  if (index >= 0 && index < SEMESTERS.length) {
+    const deleted = SEMESTERS.splice(index, 1)[0];
+    localStorage.setItem('semesterCategories', JSON.stringify(SEMESTERS.map(s => s.label)));
+    loadCategories();
+    showToast('已删除学期: ' + deleted.label, 'success');
   }
 }
 

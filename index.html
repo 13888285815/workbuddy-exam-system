@@ -135,8 +135,8 @@ a{text-decoration:none;color:inherit}
 .timer{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--blue);background:var(--blue-light);padding:8px 16px;border-radius:24px;transition:all .3s}
 .timer svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none}
 .timer.warning{color:var(--red);background:var(--red-bg);animation:pulse 1s infinite}
-.exam-body{max-width:1000px;margin:0 auto;padding:24px;display:flex;gap:24px}
-.exam-main{flex:1;min-width:0}
+.exam-body{max-width:1000px;margin:0 auto;padding:24px;display:flex;gap:24px;box-sizing:border-box;min-width:0}
+.exam-main{flex:1;min-width:0;overflow:visible}
 .exam-sidebar{width:220px;flex-shrink:0}
 
 /* 考试说明 */
@@ -148,16 +148,16 @@ a{text-decoration:none;color:inherit}
 .exam-rules svg{width:14px;height:14px;stroke:var(--blue);stroke-width:2;fill:none}
 
 /* 题目 */
-.q-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:16px;transition:all .3s}
+.q-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:16px;transition:all .3s;min-width:0;width:100%;box-sizing:border-box}
 .q-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.06)}
-.q-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.q-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;flex-shrink:0}
 .q-num{background:var(--blue);color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
 .q-num.answered{background:var(--green)}
 .q-type-tag{font-size:11px;padding:3px 10px;border-radius:12px;background:var(--blue-light);color:var(--blue);font-weight:500}
-.q-score{font-size:12px;color:var(--text3);margin-left:auto}
-.q-text{font-size:15px;line-height:1.8;margin-bottom:18px}
+.q-score{font-size:12px;color:var(--text3);margin-left:auto;flex-shrink:0;white-space:nowrap}
+.q-text{font-size:15px;line-height:1.8;margin-bottom:18px;word-wrap:break-word;word-break:break-all;overflow-wrap:break-word;min-width:0}
 /* 选项 */
-.options{display:flex;flex-direction:column;gap:10px;width:100%;box-sizing:border-box}
+.options{min-width:0;width:100%;box-sizing:border-box}
 .option-item{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:2px solid var(--border);border-radius:12px;cursor:pointer;transition:all .2s;font-size:14px;color:var(--text2);background:var(--white);width:100%;box-sizing:border-box;word-break:break-word}
 .option-item:hover{border-color:var(--blue);background:var(--blue-light)}
 .option-item.selected{border-color:var(--blue);background:var(--blue-light);color:var(--text);box-shadow:0 2px 8px rgba(24,95,165,.15)}
@@ -165,8 +165,8 @@ a{text-decoration:none;color:inherit}
 .option-item.selected .opt-letter{background:var(--blue);color:#fff}
 .option-item input{margin-top:4px;flex-shrink:0;cursor:pointer;accent-color:var(--blue);width:16px;height:16px}
 /* 判断 */
-.judge-options{display:flex;gap:12px}
-.judge-btn{flex:1;padding:16px;border:2px solid var(--border);border-radius:12px;cursor:pointer;text-align:center;font-size:15px;transition:all .2s;background:var(--white);font-weight:500}
+.judge-options{display:flex;gap:12px;min-width:0;width:100%;box-sizing:border-box}
+.judge-btn{flex:1;min-width:0;padding:16px;border:2px solid var(--border);border-radius:12px;cursor:pointer;text-align:center;font-size:15px;transition:all .2s;background:var(--white);font-weight:500;box-sizing:border-box}
 .judge-btn:hover{border-color:var(--blue);background:var(--blue-light)}
 .judge-btn.selected-true{border-color:var(--green);background:var(--green-bg);color:var(--green)}
 .judge-btn.selected-false{border-color:var(--red);background:var(--red-bg);color:var(--red)}
