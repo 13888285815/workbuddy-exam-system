@@ -806,7 +806,8 @@ function renderInput(q,i){
     for(var oi=0;oi<q.options.length;oi++){
       var opt=q.options[oi];
       var selClass=userAnswers[q.id]===opt[0]?'selected':'';
-      optsHtml+='<div class="option-item '+selClass+'" onclick="selectSingle(\''+q.id+'\','+i+',\''+opt[0]+'\')"><span class="opt-letter">'+String.fromCharCode(65+oi)+'</span><span>'+opt+'</span></div>';
+      var rawOpt=typeof opt==='string'?opt.replace(/^[A-Ea-e][\.、\s　]+/,''):String(opt);
+      optsHtml+='<div class="option-item '+selClass+'" onclick="selectSingle(\''+q.id+'\','+i+',\''+opt[0]+'\')"><span class="opt-letter">'+String.fromCharCode(65+oi)+'</span><span>'+rawOpt+'</span></div>';
     }
     var btnHtml=isSpecialMode?nextBtn:'<button class="btn btn-sm" onclick="toggleMark(\''+q.id+'\','+i+')" style="font-size:11px">'+(marked?'取消标记':'标记此题')+'</button>';
     return '<div class="options">'+optsHtml+'</div><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">'+btnHtml+'</div>';
@@ -818,7 +819,8 @@ function renderInput(q,i){
       var opt=q.options[oi];
       var selClass=sel.indexOf(opt[0])>=0?'selected':'';
       var checked=sel.indexOf(opt[0])>=0?'checked':'';
-      optsHtml+='<div class="option-item '+selClass+'" onclick="toggleMulti(\''+q.id+'\','+i+',\''+opt[0]+'\')"><input type="checkbox" '+checked+' style="pointer-events:none"><span class="opt-letter">'+String.fromCharCode(65+oi)+'</span><span>'+opt+'</span></div>';
+      var rawOpt=typeof opt==='string'?opt.replace(/^[A-Ea-e][\.、\s　]+/,''):String(opt);
+      optsHtml+='<div class="option-item '+selClass+'" onclick="toggleMulti(\''+q.id+'\','+i+',\''+opt[0]+'\')"><input type="checkbox" '+checked+' style="pointer-events:none"><span class="opt-letter">'+String.fromCharCode(65+oi)+'</span><span>'+rawOpt+'</span></div>';
     }
     var btnHtml=isSpecialMode?nextBtn:'<button class="btn btn-sm" onclick="toggleMark(\''+q.id+'\','+i+')" style="font-size:11px">'+(marked?'取消标记':'标记此题')+'</button>';
     return '<div class="options">'+optsHtml+'</div><p style="font-size:12px;color:var(--text3);margin-top:10px">提示：多选题，请选择所有正确答案</p><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">'+btnHtml+'</div>';
