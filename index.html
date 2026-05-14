@@ -615,18 +615,18 @@ function doLogin(){
   // but auto-init sample questions so student portal works standalone)
   if(!DB.get('questions')||!DB.get('papers')){
     const sampleQs=[
-      {id:'q1',type:'single',subject:'info',content:'计算机中1字节等于多少位？',options:['A.4位','B.8位','C.16位','D.32位'],answer:'B',score:2,explain:'1字节(Byte)=8位(bit)。'},
-      {id:'q2',type:'single',subject:'info',content:'HTML是什么的缩写？',options:['A.HyperText Markup Language','B.High Text Machine Language','C.HyperText Machine Language','D.High Transfer Markup Language'],answer:'A',score:2,explain:'HTML全称HyperText Markup Language。'},
-      {id:'q3',type:'single',subject:'info',content:'以下哪种排序算法平均时间复杂度最低？',options:['A.冒泡排序','B.选择排序','C.快速排序','D.插入排序'],answer:'C',score:2,explain:'快速排序平均O(nlogn)。'},
-      {id:'q4',type:'single',subject:'info',content:'TCP/IP协议中，HTTP默认端口号是？',options:['A.21','B.23','C.80','D.443'],answer:'C',score:2,explain:'HTTP默认端口80，HTTPS为443。'},
-      {id:'q5',type:'multi',subject:'info',content:'以下哪些是面向对象编程的基本特征？（多选）',options:['A.封装','B.继承','C.多态','D.递归'],answer:'ABC',score:4,explain:'OOP三大特征：封装、继承、多态。'},
-      {id:'q6',type:'multi',subject:'info',content:'以下哪些是HTTP请求方法？（多选）',options:['A.GET','B.POST','C.PUSH','D.DELETE'],answer:'ABD',score:4,explain:'HTTP标准方法：GET、POST、PUT、DELETE等，PUSH不是。'},
-      {id:'q7',type:'judge',subject:'info',content:'Python是一种编译型语言。',answer:'错误',score:2,explain:'Python是解释型语言，运行时逐行解释执行。'},
-      {id:'q8',type:'judge',subject:'info',content:'JavaScript可以在服务器端运行。',answer:'正确',score:2,explain:'Node.js使JavaScript可在服务器端运行。'},
-      {id:'q9',type:'judge',subject:'info',content:'CSS中class选择器使用#号前缀。',answer:'错误',score:2,explain:'class用"."前缀，"#"是ID选择器。'},
-      {id:'q10',type:'fill',subject:'math',content:'在CSS中，用于设置文字颜色的属性是___。',answer:'color',score:3,explain:'CSS的color属性用于设置文字颜色。'},
-      {id:'q11',type:'fill',subject:'math',content:'JavaScript中声明常量使用关键字___。',answer:'const',score:3,explain:'const声明常量，ES6引入。'},
-      {id:'q12',type:'essay',subject:'info',content:'请简述什么是RESTful API，并说明其主要设计原则。',answer:'RESTful API是基于REST架构风格的API设计规范。主要原则：1)无状态；2)统一接口；3)资源导向；4)使用HTTP方法表示操作；5)可缓存性。',score:10,explain:'RESTful是现代Web开发重要概念。'}
+      {id:'q1',type:'single',subject:'info',content:'计算机中1字节等于多少位？',options:['A. 4位','B. 8位','C. 16位','D. 32位'],answer:'B',score:2,explain:'1字节(Byte)=8位(bit)。'},
+      {id:'q2',type:'single',subject:'info',content:'HTML是什么的缩写？',options:['A. HyperText Markup Language','B. High Text Machine Language','C. HyperText Machine Language','D. High Transfer Markup Language'],answer:'A',score:2,explain:'HTML全称HyperText Markup Language。'},
+      {id:'q3',type:'single',subject:'info',content:'以下哪种排序算法平均时间复杂度最低？',options:['A. 冒泡排序','B. 选择排序','C. 快速排序','D. 插入排序'],answer:'C',score:2,explain:'快速排序平均O(nlogn)。'},
+      {id:'q4',type:'single',subject:'info',content:'TCP/IP协议中，HTTP默认端口号是？',options:['A. 21','B. 23','C. 80','D. 443'],answer:'C',score:2,explain:'HTTP默认端口80，HTTPS为443。'},
+      {id:'q5',type:'multi',subject:'info',content:'以下哪些是面向对象编程的基本特征？（多选）',options:['A. 封装','B. 继承','C. 多态','D. 递归'],answer:['A','B','C'],score:4,explain:'OOP三大特征：封装、继承、多态。'},
+      {id:'q6',type:'multi',subject:'info',content:'以下哪些是HTTP请求方法？（多选）',options:['A. GET','B. POST','C. PUSH','D. DELETE'],answer:['A','B','D'],score:4,explain:'HTTP标准方法：GET、POST、PUT、DELETE等，PUSH不是。'},
+      {id:'q7',type:'judge',subject:'info',content:'Python是一种编译型语言。',options:[],answer:'错误',score:2,explain:'Python是解释型语言，运行时逐行解释执行。'},
+      {id:'q8',type:'judge',subject:'info',content:'JavaScript可以在服务器端运行。',options:[],answer:'正确',score:2,explain:'Node.js使JavaScript可在服务器端运行。'},
+      {id:'q9',type:'judge',subject:'info',content:'CSS中class选择器使用#号前缀。',options:[],answer:'错误',score:2,explain:'class用"."前缀，"#"是ID选择器。'},
+      {id:'q10',type:'fill',subject:'math',content:'在CSS中，用于设置文字颜色的属性是___。',options:[],answer:'color',score:3,explain:'CSS的color属性用于设置文字颜色。'},
+      {id:'q11',type:'fill',subject:'math',content:'JavaScript中声明常量使用关键字___。',options:[],answer:'const',score:3,explain:'const声明常量，ES6引入。'},
+      {id:'q12',type:'essay',subject:'info',content:'请简述什么是RESTful API，并说明其主要设计原则。',options:[],answer:'RESTful API是基于REST架构风格的API设计规范。主要原则：1)无状态；2)统一接口；3)资源导向；4)使用HTTP方法表示操作；5)可缓存性。',score:10,explain:'RESTful是现代Web开发重要概念。'}
     ];
     if(!DB.get('questions'))DB.set('questions',sampleQs);
     if(!DB.get('papers')){
