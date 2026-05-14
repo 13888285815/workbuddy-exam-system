@@ -557,6 +557,14 @@ function doLogin(){
   const u=$('loginUser').value.trim();
   const p=$('loginPass').value;
   if(!u||!p){$('loginError').textContent='请输入用户名和密码';$('loginError').style.display='block';return;}
+  // Auto-init demo users if empty
+  if(!DB.get('users')){
+    DB.set('users',[
+      {id:'u1',username:'admin',password:'admin123',name:'管理员',role:'admin',status:'active',created:new Date().toLocaleDateString()},
+      {id:'u2',username:'student1',password:'123456',name:'张三',role:'student',status:'active',created:new Date().toLocaleDateString()},
+      {id:'u3',username:'student2',password:'123456',name:'李四',role:'student',status:'active',created:new Date().toLocaleDateString()}
+    ]);
+  }
   const user=DB.users().find(x=>x.username===u&&x.password===p&&x.status==='active');
   if(!user){$('loginError').textContent='用户名或密码错误';$('loginError').style.display='block';$('loginPass').value='';return;}
   currentUser=user;

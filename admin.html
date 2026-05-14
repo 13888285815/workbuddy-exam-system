@@ -972,22 +972,12 @@ function doLogin(){
   const u=document.getElementById('loginUser').value.trim();
   const p=document.getElementById('loginPass').value;
   
-  // 仅在无用户数据时初始化，避免覆盖已有数据
+  // 仅在无用户数据时初始化
   if(!DB.get('users')) {
     initData();
   }
   
-  // 直接使用默认用户验证，不再从localStorage读取
-  const defaultUsers = [
-    {id:'u1',username:'admin',password:'admin123',name:'管理员',role:'admin',status:'active',created:new Date().toLocaleDateString()},
-    {id:'u2',username:'student1',password:'123456',name:'张三',role:'student',status:'active',created:new Date().toLocaleDateString()}
-  ];
-  
-  // 保存默认用户
-  DB.set('users', defaultUsers);
-  
-  // 直接在默认用户中查找匹配
-  const user = defaultUsers.find(x => x.username === u && x.password === p && x.status === 'active');
+  const user = DB.users().find(x => x.username === u && x.password === p && x.status === 'active');
   
   if(!user){
     showToast('用户名或密码错误','error');
