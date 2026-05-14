@@ -2244,7 +2244,7 @@ function renderQuestions(){
         <button class="btn btn-danger btn-sm" style="margin-left:6px" onclick="deleteQuestion('${q.id}')">删除</button>
       </div>
       <div class="q-text">${q.content}</div>
-      ${q.options&&q.options.length?`<div class="q-options" style="margin-top:6px">${q.options.map(o=>`<div class="q-option ${q.answer&&q.answer.split('').some(c=>o.startsWith(c))?'correct':''}"> ${o}</div>`).join('')}</div>`:''}
+      ${q.options&&q.options.length?`<div class="q-options" style="margin-top:6px">${q.options.map((o,oi)=>`<div class="q-option ${(Array.isArray(q.answer)?q.answer:String(q.answer||'').split('')).some(c=>String(o).startsWith(c))?'correct':''}"> ${String.fromCharCode(65+oi)+'. '+o.replace(/^[A-Ea-e][\.、\s　]+/,'')||o}</div>`).join('')}</div>`:''}
       ${q.answer?`<div class="q-answer">答案：${q.answer}</div>`:''}
       ${q.explain?`<div style="font-size:12px;color:var(--text3);margin-top:4px">解析：${q.explain}</div>`:''}
     </div>`).join(''):'<div class="empty">暂无题目，请先通过PDF导入或手动添加</div>';
@@ -2523,12 +2523,15 @@ function previewPaper(id){
   const qs=p.questionIds.map(qid=>DB.questions().find(q=>q.id===qid)).filter(Boolean);
   let html='<div style="max-height:60vh;overflow-y:auto">';
   qs.forEach((q,i)=>{
-    const at=q.answer&&q.answer.length?q.answer.join('；'):'—';
+    const at=q.answer&&(Array.isArray(q.answer)?q.answer.join('；'):q.answer)||'—';
     html+='<div style="background:var(--bg);border-radius:12px;padding:14px;margin-bottom:10px">';
     html+='<div style="font-size:13px;font-weight:600;margin-bottom:6px">'+ (i+1)+'. ['+q.type+'] '+q.content+'</div>';
     if(q.options){
       html+='<div style="font-size:12px;color:var(--text2);line-height:1.8">';
-      q.options.forEach((o,oi)=>{html+='<div>'+String.fromCharCode(65+oi)+'. '+o+'</div>';});
+      q.options.forEach((o,oi)=>{
+        const rawOpt=typeof o==='string'?o.replace(/^[A-Ea-e][\.、\s　]+/,''):String(o);
+        html+='<div>'+String.fromCharCode(65+oi)+'. '+rawOpt+'</div>';
+      });
       html+='</div>';
     }
     html+='<div style="margin-top:6px;font-size:12px;color:var(--green)">✓ 答案：'+at+'</div>';
