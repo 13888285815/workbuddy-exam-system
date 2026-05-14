@@ -543,6 +543,10 @@ textarea.fill-input{resize:vertical;min-height:120px}
       </h3>
       <div id="reviewList"></div>
     </div>
+    <div class="retry-section" id="retrySection" style="text-align:center;margin:20px 0">
+      <button class="btn btn-primary btn-lg" onclick="retryExam()" style="margin:8px">🔄 重新作答（错题优先）</button>
+      <button class="btn btn-secondary btn-lg" onclick="backHome()" style="margin:8px">返回首页</button>
+    </div>
   </div>
 </div>
 
@@ -1326,6 +1330,17 @@ function showResult(r){
   
   // 成功时显示庆祝效果
   if(r.passed)createConfetti();
+}
+
+function retryExam(){
+  const wrongs=JSON.parse(localStorage.getItem('exam_wrongs')||'[]');
+  if(wrongs.length>0){
+    // 有错题 → 先做错题
+    startWrongPractice();
+  }else{
+    // 无错题 → 重新做全套
+    startExam(currentPaper.id);
+  }
 }
 
 function createConfetti(){
