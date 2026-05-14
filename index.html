@@ -802,7 +802,7 @@ function startExam(paperId){
   const typeNames={single:'单选题',multi:'多选题',judge:'判断题',fill:'填空题',essay:'简答题'};
   const rules=Object.entries(typeStats).map(([t,c])=>`${typeNames[t]} ${c} 道`).join(' · ');
   
-  $('examIntro').innerHTML=\`<div class='exam-intro-card'>
+  $('examIntro').innerHTML=`<div class='exam-intro-card'>
     <h2>📝 ${paper.name}</h2>
     <p style='color:var(--text2);margin:12px 0'>${paper.desc||'认真作答，祝您取得好成绩！'}</p>
     <div class='exam-rules' style='justify-content:center'>
@@ -812,7 +812,7 @@ function startExam(paperId){
     </div>
     <div style='margin-top:20px;font-size:13px;color:var(--text3)'>${rules}</div>
     <button class='btn btn-primary' onclick='beginExam()' style='margin-top:28px;padding:14px 40px;font-size:16px'>开始答题</button>
-  </div>\`;
+  </div>`;
   
   $('examQuestions').innerHTML='';
   $('progressText').textContent='0/'+qs.length;
@@ -843,19 +843,19 @@ function renderCurrentQuestion(){
   $('unanswered').textContent=total-answered;
   
   // 渲染单题卡片
-  var html=\`<div class='single-q-card'>\`;
+  var html='<div class="single-q-card">';
   
   // 题目进度条
-  html+=\`<div class='q-progress'>第 <strong>\${currentQIndex+1}</strong> / \${total} 题</div>\`;
+  html+='<div class="q-progress">第 <strong>'+(currentQIndex+1)+'</strong> / '+total+' 题</div>';
   
   // 题目卡片
-  html+=\`<div class='q-card' style='margin-top:16px'>\`;
-  html+=\`<div class='q-header'>\`;
-  html+=\`<div class='q-num'>\${currentQIndex+1}</div>\`;
-  html+=\`<span class='q-type-tag'>\${typeLabel[q.type]}</span>\`;
-  html+=\`<span class='q-score'>\${q.score}分</span>\`;
-  html+=\`</div>\`;
-  html+=\`<div class='q-text'>\${q.content}</div>\`;
+  html+='<div class="q-card" style="margin-top:16px">';
+  html+='<div class="q-header">';
+  html+='<div class="q-num">'+(currentQIndex+1)+'</div>';
+  html+='<span class="q-type-tag">'+typeLabel[q.type]+'</span>';
+  html+='<span class="q-score">'+q.score+'分</span>';
+  html+='</div>';
+  html+='<div class="q-text">'+q.content+'</div>';
   
   // 选项/答案区域
   if(showingAnswer){
@@ -886,9 +886,9 @@ function renderInputSingle(q,i){
       var opt=q.options[oi];
       var selClass=userAnswers[q.id]===opt[0]?'selected':'';
       var rawOpt=typeof opt==='string'?opt.replace(/^[A-Ea-e][\.、\s　]+/,''):String(opt);
-      optsHtml+=\`<div class='option-item \${selClass}' onclick='selectSingle("\${q.id}",\${i},"\${opt[0]}")'><span class='opt-letter'>\${String.fromCharCode(65+oi)}</span><span>\${rawOpt}</span></div>\`;
+      optsHtml+='<div class="option-item '+selClass+'" onclick="selectSingle(\''+q.id+'\','+i+',\''+opt[0]+'\')"><span class="opt-letter">'+String.fromCharCode(65+oi)+'</span><span>'+rawOpt+'</span></div>';
     }
-    html+=\`<div class='options'>\${optsHtml}</div>\`;
+    html+='<div class="options">'+optsHtml+'</div>';
   }
   else if(q.type==='multi'){
     var sel=userAnswers[q.id]||[];
@@ -898,28 +898,28 @@ function renderInputSingle(q,i){
       var selClass=sel.indexOf(opt[0])>=0?'selected':'';
       var checked=sel.indexOf(opt[0])>=0?'checked':'';
       var rawOpt=typeof opt==='string'?opt.replace(/^[A-Ea-e][\.、\s　]+/,''):String(opt);
-      optsHtml+=\`<div class='option-item \${selClass}' onclick='toggleMulti("\${q.id}",\${i},"\${opt[0]}")'><input type='checkbox' \${checked} style='pointer-events:none'><span class='opt-letter'>\${String.fromCharCode(65+oi)}</span><span>\${rawOpt}</span></div>\`;
+      optsHtml+='<div class="option-item '+selClass+'" onclick="toggleMulti(\''+q.id+'\','+i+',\''+opt[0]+'\')"><input type="checkbox" '+checked+' style="pointer-events:none"><span class="opt-letter">'+String.fromCharCode(65+oi)+'</span><span>'+rawOpt+'</span></div>';
     }
-    html+=\`<div class='options'>\${optsHtml}</div><p style='font-size:12px;color:var(--text3);margin-top:10px'>提示：多选题，请选择所有正确答案</p>\`;
+    html+='<div class="options">'+optsHtml+'</div><p style="font-size:12px;color:var(--text3);margin-top:10px">提示：多选题，请选择所有正确答案</p>';
   }
   else if(q.type==='judge'){
     var val=userAnswers[q.id];
     var trueClass=val==='正确'?'selected-true':'';
     var falseClass=val==='错误'?'selected-false':'';
-    html+=\`<div class='judge-options'><div class='judge-btn \${trueClass}' onclick='selectJudge("\${q.id}",\${i},"正确")'>✓ 正确</div><div class='judge-btn \${falseClass}' onclick='selectJudge("\${q.id}",\${i},"错误")'>✗ 错误</div></div>\`;
+    html+='<div class="judge-options"><div class="judge-btn '+trueClass+'" onclick="selectJudge(\''+q.id+'\','+i+',\'正确\')">✓ 正确</div><div class="judge-btn '+falseClass+'" onclick="selectJudge(\''+q.id+'\','+i+',\'错误\')">✗ 错误</div></div>';
   }
   else if(q.type==='fill'){
     const val=userAnswers[q.id]||'';
-    html+=\`<input class='fill-input' type='text' placeholder='请输入答案' value="\${val}" oninput='saveText("\${q.id}",\${i},this.value)'><div class='char-count'>已输入 \${val.length} 字</div>\`;
+    html+='<input class="fill-input" type="text" placeholder="请输入答案" value="'+val.replace(/"/g,'&quot;')+'" oninput="saveText(\''+q.id+'\','+i+',this.value)"><div class="char-count">已输入 '+val.length+' 字</div>';
   }
   else if(q.type==='essay'){
     const val=userAnswers[q.id]||'';
-    html+=\`<textarea class='fill-input' rows='6' placeholder='请输入答案...' oninput='saveText("\${q.id}",\${i},this.value)'>\${val}</textarea><div class='char-count'>已输入 \${val.length} 字</div>\`;
+    html+='<textarea class="fill-input" rows="6" placeholder="请输入答案..." oninput="saveText(\''+q.id+'\','+i+',this.value)">'+val+'</textarea><div class="char-count">已输入 '+val.length+' 字</div>';
   }
   
   // 确认答案按钮
-  html+=\`<div class='q-actions'>\`;
-  html+=\`<button class='btn btn-primary btn-lg' onclick='confirmAnswer()' \${!answered?'disabled':''}>确认答案</button>\`;
+  html+='<div class="q-actions">';
+  html+='<button class="btn btn-primary btn-lg" onclick="confirmAnswer()"'+(!answered?' disabled':'')+'>确认答案</button>';
   html+='</div>';
   
   return html;
@@ -948,24 +948,24 @@ function renderAnswerReview(q){
     const kw=(correctAns||'').toLowerCase().split(/[,，\s]+/).filter(w=>w.length>1);
     const hit=kw.filter(k=>ua2.includes(k)).length;
     isCorrect=hit>=Math.ceil(kw.length*0.6);
-    status=hit>0?\`关键词命中 \${hit}/\${kw.length}\`:'未命中关键词';
+    status=hit>0?'关键词命中 '+hit+'/'+kw.length:'未命中关键词';
   }
   
-  let html=\`<div class='answer-result \${isCorrect?'correct':'wrong'}'>\`;
-  html+=\`<div class='ans-status'>\${status}</div>\`;
-  html+=\`<div class='ans-row'><span class='ans-label'>你的答案</span><span class='ans-val'>\${Array.isArray(ua)?ua.join('、'):ua||'未作答'}</span></div>\`;
-  html+=\`<div class='ans-row'><span class='ans-label'>正确答案</span><span class='ans-val correct'>\${Array.isArray(correctAns)?correctAns.join('、'):correctAns||'-'}</span></div>\`;
+  let html='<div class="answer-result '+(isCorrect?'correct':'wrong')+'">';
+  html+='<div class="ans-status">'+status+'</div>';
+  html+='<div class="ans-row"><span class="ans-label">你的答案</span><span class="ans-val">'+(Array.isArray(ua)?ua.join('、'):ua||'未作答')+'</span></div>';
+  html+='<div class="ans-row"><span class="ans-label">正确答案</span><span class="ans-val correct">'+(Array.isArray(correctAns)?correctAns.join('、'):correctAns||'-')+'</span></div>';
   if(q.explain){
-    html+=\`<div class='ans-explain'><strong>解析：</strong>\${q.explain}</div>\`;
+    html+='<div class="ans-explain"><strong>解析：</strong>'+q.explain+'</div>';
   }
   html+='</div>';
   
   // 下一题/完成按钮
-  html+=\`<div class='q-actions'>\`;
+  html+='<div class="q-actions">';
   if(currentQIndex<currentQuestions.length-1){
-    html+=\`<button class='btn btn-primary btn-lg' onclick='nextQuestion()'>下一题 →</button>\`;
+    html+='<button class="btn btn-primary btn-lg" onclick="nextQuestion()">下一题 →</button>';
   }else{
-    html+=\`<button class='btn btn-primary btn-lg' onclick='finishExam()'>完成考试</button>\`;
+    html+='<button class="btn btn-primary btn-lg" onclick="finishExam()">完成考试</button>';
   }
   html+='</div>';
   
