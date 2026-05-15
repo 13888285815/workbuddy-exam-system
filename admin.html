@@ -175,6 +175,14 @@ textarea{resize:vertical;min-height:80px}
 .wrong-stat{padding:12px;background:var(--bg);border-radius:8px;text-align:center}
 .wrong-stat .value{font-size:24px;font-weight:600;color:var(--red)}
 .wrong-stat .label{font-size:12px;color:var(--text3)}
+/* 导出按钮样式 */
+.export-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:linear-gradient(135deg,var(--green),#2d7a2d);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;transition:all .2s}
+.export-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(45,122,45,.3)}
+/* 模态框优化 */
+.modal-box{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.modal-box::-webkit-scrollbar{width:6px}
+.modal-box::-webkit-scrollbar-track{background:transparent}
+.modal-box::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 </style>
 </head>
 <body>
@@ -259,6 +267,16 @@ textarea{resize:vertical;min-height:80px}
           <div class="stat-card"><div class="label">题库总题数</div><div class="value" id="stat-questions">0</div><div class="sub">各类型题目</div></div>
           <div class="stat-card"><div class="label">试卷数量</div><div class="value" id="stat-papers">0</div><div class="sub">已发布 / 全部</div></div>
           <div class="stat-card"><div class="label">考试次数</div><div class="value" id="stat-records">0</div><div class="sub">累计作答记录</div></div>
+        </div>
+        <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+          <button class="export-btn" onclick="exportAllData('json')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            导出全部数据 (JSON)
+          </button>
+          <button class="export-btn" onclick="exportAllData('csv')" style="background:linear-gradient(135deg,var(--blue),var(--blue-dark))">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            导出成绩记录 (CSV)
+          </button>
         </div>
         <div class="panel">
           <div class="panel-header"><h3>最近考试记录</h3></div>
@@ -3694,6 +3712,51 @@ initData = function() {
   initCategories();
   updateCategoryDropdowns();
 };
+
+// ===================== 数据导出功能 =====================
+function exportAllData(format){
+  const data={
+    users:DB.users(),
+    questions:DB.questions(),
+    papers:DB.papers(),
+    records:DB.records(),
+    exportTime:new Date().toLocaleString(),
+    version:'1.0'
+  };
+  
+  if(format==='json'){
+    // 导出全部数据为JSON
+    const content=JSON.stringify(data,null,2);
+    const blob=new Blob([content],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='考试系统数据备份_'+new Date().toLocaleDateString().replace(/\//g,'-')+'.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('数据导出成功','success');
+  }else if(format==='csv'){
+    // 只导出成绩记录为CSV
+    const records=DB.records();
+    if(!records.length){
+      showToast('暂无成绩记录可导出','error');
+      return;
+    }
+    let content='\uFEFF'; // BOM for Chinese support
+    content+='考生姓名,试卷名称,得分,总分,正确题数,错误题数,是否通过,用时,考试时间\n';
+    records.forEach(r=>{
+      content+='"'+r.userName+'","'+r.paperName+'","'+r.score+'","'+r.total+'","'+r.correct+'","'+r.wrong+'","'+(r.passed?'通过':'未通过')+'","'+r.duration+'","'+r.time+'"\n';
+    });
+    const blob=new Blob([content],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='成绩记录_'+new Date().toLocaleDateString().replace(/\//g,'-')+'.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('成绩导出成功','success');
+  }
+}
 
 // ===================== START =====================
 initData();
